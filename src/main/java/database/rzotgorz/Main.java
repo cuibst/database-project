@@ -1,9 +1,11 @@
+package database.rzotgorz;
+
 import lombok.extern.slf4j.Slf4j;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
-import parser.SQLLexer;
-import parser.SQLParser;
+import database.rzotgorz.parser.SQLLexer;
+import database.rzotgorz.parser.SQLParser;
 
 @Slf4j
 public class Main {

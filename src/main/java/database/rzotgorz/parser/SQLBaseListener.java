@@ -1,5 +1,5 @@
 // Generated from D:/git-repo/dbms-homework/src/main/resources\SQL.g4 by ANTLR 4.9.1
-package parser;
+package database.rzotgorz.parser;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ErrorNode;

@@ -7,4 +7,4 @@ This project is written by cyk and llh, for the purpose of the database class 20
 Update in 2021.10.17 22:32
 - Project initialized
 - antlr and slf4j configured
-- See ```Main.java``` for the usage of antlr
+- See ```database.rzotgorz.Main.java``` for the usage of antlr
