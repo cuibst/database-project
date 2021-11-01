@@ -1,0 +1,8 @@
+2021-10-18 10:04:34,215 [main] [database.rzotgorz.Main] [INFO] - Input: CREATE DATABASE student;
+2021-10-18 10:04:34,282 [main] [database.rzotgorz.Main] [INFO] - Input: ABC 123
+2021-10-18 10:05:32.345 [main] [database.rzotgorz.Main] [INFO] - Input: CREATE DATABASE student;
+2021-10-18 10:05:32.413 [main] [database.rzotgorz.Main] [INFO] - Input: ABC 123
+2021-10-18 10:07:06.668 [main] [database.rzotgorz.Main] [INFO] - Input: CREATE DATABASE student;
+2021-10-18 10:07:06.730 [main] [database.rzotgorz.Main] [INFO] - Input: ABC 123
+2021-10-18 10:07:35.806 [main] [database.rzotgorz.Main] [INFO] - Input: CREATE DATABASE student;
+2021-10-18 10:07:35.864 [main] [database.rzotgorz.Main] [INFO] - Input: ABC 123
