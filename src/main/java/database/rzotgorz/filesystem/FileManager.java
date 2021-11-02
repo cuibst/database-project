@@ -2,13 +2,14 @@ package database.rzotgorz.filesystem;
 
 import database.rzotgorz.exceptions.AlreadyOpenedException;
 import database.rzotgorz.exceptions.FailToOpenException;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.io.*;
 import java.util.*;
 
 @Slf4j
+@Data
 public class FileManager {
 
     public static class Page {
@@ -124,7 +125,7 @@ public class FileManager {
         }
     }
 
-    private void closeFile(int fileId) {
+    public void closeFile(int fileId) {
         Set<Page> pages = cachedPages[fileId];
         cachedPages[fileId] = new HashSet<>();
         for(Page page : pages) {
@@ -242,5 +243,4 @@ public class FileManager {
             log.info("Entry: fid:{} pid:{} index:{}", entry.getKey().fileId, entry.getKey().pageId, entry.getValue());
         }
     }
-
 }
