@@ -1,12 +1,19 @@
 package database.rzotgorz;
 
 import database.rzotgorz.filesystem.FileManager;
+import database.rzotgorz.recordsystem.ByteIntegerConverter;
+import database.rzotgorz.recordsystem.FileHandler;
+import database.rzotgorz.recordsystem.RID;
+import database.rzotgorz.recordsystem.RecordManager;
 import lombok.extern.slf4j.Slf4j;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import database.rzotgorz.parser.SQLLexer;
 import database.rzotgorz.parser.SQLParser;
+
+import java.io.IOException;
+import java.io.RandomAccessFile;
 
 @Slf4j
 public class Main {
@@ -45,7 +52,7 @@ public class Main {
 
         manager.printPageData();
 
-        for(int pageId = 0; pageId < 256; pageId ++) {
+        for(int pageId = 0; pageId < 10; pageId ++) {
             byte[] data = manager.getPageData(fid1, pageId);
             log.info("From fid:{} pid:{} read: {}, {}", fid1, pageId, data[0], data[1]);
             manager.access(fid1, pageId);
@@ -53,6 +60,14 @@ public class Main {
             log.info("From fid:{} pid:{} read: {}, {}", fid2, pageId, data[0], data[1]);
             manager.access(fid2, pageId);
         }
-        manager.shutdown();
+
+        RecordManager rm=new RecordManager();
+        rm.createFile("llh.dat",4);
+        FileHandler handler=rm.openFile("llh.dat");
+        byte[] bytes=ByteIntegerConverter.intToBytes(22);
+        for(int i=0;i<1640;i++)
+            handler.insertRecord(bytes);
+        rm.closeFile("llh.dat");
+
     }
 }

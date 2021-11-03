@@ -2,13 +2,14 @@ package database.rzotgorz.filesystem;
 
 import database.rzotgorz.exceptions.AlreadyOpenedException;
 import database.rzotgorz.exceptions.FailToOpenException;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.io.*;
 import java.util.*;
 
 @Slf4j
+@Data
 public class FileManager {
 
     public static class Page {
@@ -74,6 +75,10 @@ public class FileManager {
             indexToPage[i] = new Page();
         pageToIndex = new HashMap<>();
         pageBuffer = new byte[CACHE_CAPACITY][PAGE_SIZE];
+
+        File dataDirectory = new File("data");
+        if(!dataDirectory.exists())
+            dataDirectory.mkdir();
     }
 
     private void access(int index) {
@@ -109,10 +114,23 @@ public class FileManager {
         free(index);
     }
 
+    public int createFile(String filename) {
+        if(filenameToId.containsKey(filename))
+            throw new AlreadyOpenedException(filename);
+        File file = new File("." + File.separator + "data" + File.separator + filename);
+        if(file.exists())
+            file.delete();
+        int id = remainingId.poll();
+        cachedPages[id] = new HashSet<>();
+        filenameToId.put(filename, id);
+        idToFilename[id] = filename;
+        return id;
+    }
+
     public int openFile(String filename) {
         if(filenameToId.containsKey(filename))
             throw new AlreadyOpenedException(filename);
-        try(RandomAccessFile file = new RandomAccessFile(filename, "rw")) {
+        try(RandomAccessFile file = new RandomAccessFile("." + File.separator + "data" + File.separator + filename, "rw")) {
             int id = remainingId.poll();
             cachedPages[id] = new HashSet<>();
             filenameToId.put(filename, id);
@@ -124,7 +142,7 @@ public class FileManager {
         }
     }
 
-    private void closeFile(int fileId) {
+    public void closeFile(int fileId) {
         Set<Page> pages = cachedPages[fileId];
         cachedPages[fileId] = new HashSet<>();
         for(Page page : pages) {
@@ -146,7 +164,7 @@ public class FileManager {
         long offset = ((long)pageId) << PAGE_SIZE_LOG_2;
         String filename = idToFilename[fileId];
         byte[] result = new byte[PAGE_SIZE];
-        try(RandomAccessFile file = new RandomAccessFile(filename, "rw")) {
+        try(RandomAccessFile file = new RandomAccessFile("." + File.separator + "data" + File.separator + filename, "rw")) {
             file.seek(offset);
             file.read(result);
         } catch (IOException e) {
@@ -156,7 +174,7 @@ public class FileManager {
     }
 
     public void writePage(int fileId, int pageId, byte[] buf) {
-        try (RandomAccessFile file = new RandomAccessFile(idToFilename[fileId], "rw")) {
+        try (RandomAccessFile file = new RandomAccessFile("." + File.separator + "data" + File.separator + idToFilename[fileId], "rw")) {
             long offset = ((long)pageId) << PAGE_SIZE_LOG_2;
             file.seek(offset);
             file.write(buf);
@@ -167,7 +185,7 @@ public class FileManager {
 
     public int createPage(int fileId, byte[] data) {
         long length = -1;
-        try (RandomAccessFile file = new RandomAccessFile(idToFilename[fileId], "rw")) {
+        try (RandomAccessFile file = new RandomAccessFile("." + File.separator + "data" + File.separator + idToFilename[fileId], "rw")) {
             length = file.length();
             file.seek(length);
             file.write(data);
@@ -242,5 +260,4 @@ public class FileManager {
             log.info("Entry: fid:{} pid:{} index:{}", entry.getKey().fileId, entry.getKey().pageId, entry.getValue());
         }
     }
-
 }
