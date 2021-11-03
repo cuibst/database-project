@@ -41,7 +41,6 @@ public class RecordManager {
         {
             headerBytes[i+24]=str[i];
         }
-        System.arraycopy(result,0,headerBytes,0,4);
         return headerBytes;
     }
     public JSONObject changeBytesToJsonObject(byte[] bytes)
@@ -139,7 +138,9 @@ public class RecordManager {
             JSONObject newHeader=handler.getFileHeader();
             System.out.println(newHeader);
             byte[] headerBytes=changeJSONObjectToBytes(newHeader);
-            fm.putPage(handler.getFileId(),0,headerBytes);
+            byte[] page=new byte[PAGE_SIZE];
+            System.arraycopy(headerBytes,0,page,0,headerBytes.length);
+            fm.putPage(handler.getFileId(),0,page);
         }
         openFiles.remove(filename);
         fm.closeFile(handler.getFileId());

@@ -192,7 +192,7 @@ public class FileHandler {
         byte[] bitmap=getBitmap(page);
         int slotId=findVacancySlot(bitmap);
         int offset=getRecordOffset(slotId);
-        System.out.println("slotId: "+slotId);
+//        System.out.println("slotId: "+slotId);
         if(data.length!=recordLen)
             log.info("ERROR:: data size {} is not match recordLen {} ",data.length,recordLen);
         for(int i=0;i<recordLen;i++) {
@@ -207,7 +207,7 @@ public class FileHandler {
         if(findVacancySlot(bitmap)==-1)
         {
             fileHeader.put("nextVacancyPage",this.getNextVacancy(page));
-            System.out.println(getNextVacancy(page));
+//            System.out.println(getNextVacancy(page));
             page=this.setNextVacancy(page,vacancyPage);
         }
         fm.putPage(fileId,vacancyPage,page);
@@ -216,7 +216,6 @@ public class FileHandler {
     }
     public byte[] appendNewPage()
     {
-        System.out.println("in");
         int originPageId=Integer.parseInt(fileHeader.get("nextVacancyPage").toString());
         byte[] newData=new byte[PAGE_SIZE];
         byte b=0;

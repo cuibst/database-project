@@ -66,9 +66,12 @@ public class Main {
         FileHandler handler=rm.openFile("llh.dat");
 //        int pageId=handler.createPage();
         byte[] bytes=ByteIntegerConverter.intToBytes(22);
-//        for(int i=0;i<1640;i++)
+        for(int i=0;i<1640;i++)
         handler.insertRecord(bytes);
-//        handler.deletePage(new RID(1,0));
+////        handler.deletePage(new RID(1,0));
         rm.closeFile("llh.dat");
+//        handler=rm.openFile("llh.dat");
+//        handler.insertRecord(bytes);
+//        rm.closeFile("llh.dat");
     }
 }
