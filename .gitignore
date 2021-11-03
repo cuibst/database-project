@@ -35,5 +35,4 @@ buildNumber.properties
 .mvn/wrapper/maven-wrapper.jar
 
 
-test1.txt
-test2.txt
+data/

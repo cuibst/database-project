@@ -16,7 +16,7 @@ import java.util.*;
 @NoArgsConstructor
 public class RecordManager {
     private FileManager fm=new FileManager();
-    private Map<String,FileHandler> openFiles=new HashMap();
+    private Map<String,FileHandler> openFiles=new HashMap<>();
     private static final ResourceBundle bundle = ResourceBundle.getBundle("configurations");
     private static final int PAGE_SIZE = Integer.parseInt(bundle.getString("PAGE_SIZE"));
     public byte[] changeJSONObjectToBytes(JSONObject header)
@@ -24,19 +24,19 @@ public class RecordManager {
         byte[] headerBytes=new byte[54];
         Arrays.fill(headerBytes,(byte)0);
         byte[] result;
-        result=ByteIntegerConverter.intToBytes(Integer.parseInt(header.getString("recordNum").toString()));
+        result=ByteIntegerConverter.intToBytes(Integer.parseInt(header.getString("recordNum")));
         System.arraycopy(result,0,headerBytes,0,4);
-        result=ByteIntegerConverter.intToBytes(Integer.parseInt(header.getString("recordLen").toString()));
+        result=ByteIntegerConverter.intToBytes(Integer.parseInt(header.getString("recordLen")));
         System.arraycopy(result,0,headerBytes,4,4);
-        result=ByteIntegerConverter.intToBytes(Integer.parseInt(header.getString("recordPerPage").toString()));
+        result=ByteIntegerConverter.intToBytes(Integer.parseInt(header.getString("recordPerPage")));
         System.arraycopy(result,0,headerBytes,8,4);
-        result=ByteIntegerConverter.intToBytes(Integer.parseInt(header.getString("bitmapLength").toString()));
+        result=ByteIntegerConverter.intToBytes(Integer.parseInt(header.getString("bitmapLength")));
         System.arraycopy(result,0,headerBytes,12,4);
-        result=ByteIntegerConverter.intToBytes(Integer.parseInt(header.getString("nextVacancyPage").toString()));
+        result=ByteIntegerConverter.intToBytes(Integer.parseInt(header.getString("nextVacancyPage")));
         System.arraycopy(result,0,headerBytes,16,4);
-        result=ByteIntegerConverter.intToBytes(Integer.parseInt(header.getString("pageNum").toString()));
+        result=ByteIntegerConverter.intToBytes(Integer.parseInt(header.getString("pageNum")));
         System.arraycopy(result,0,headerBytes,20,4);
-        byte[] str=header.getString("filename").toString().getBytes(StandardCharsets.UTF_8);
+        byte[] str=header.getString("filename").getBytes(StandardCharsets.UTF_8);
         for(int i=0;i<30&&i<str.length;i++)
         {
             headerBytes[i+24]=str[i];
@@ -66,7 +66,6 @@ public class RecordManager {
         System.arraycopy(bytes,20,ans,0,4);
         result=ByteIntegerConverter.bytesToInt(ans);
         header.put("pageNum",result);
-        ArrayList<Byte> bytes1=new ArrayList<>();
         StringBuilder builder = new StringBuilder();
         for(int i=0;i<30;i++)
         {
@@ -80,33 +79,22 @@ public class RecordManager {
     }
     public void createFile(String filename,int recordLen)
     {
-        File file=new File(filename);
-        if(!file.exists())
-        {
-            try{
-                file.createNewFile();
-                int fileId=fm.openFile(filename);
-                int recordPerPage= Header.calPageCapacity(recordLen);
-                int bitmapLength=Header.calBitmapLength(recordPerPage);
-                JSONObject fileHeader=new JSONObject();
-                fileHeader.put("recordNum",0);
-                fileHeader.put("recordLen",recordLen);
-                fileHeader.put("recordPerPage",recordPerPage);
-                fileHeader.put("bitmapLength",bitmapLength);
-                fileHeader.put("filename",filename);
-                fileHeader.put("nextVacancyPage",0);
-                fileHeader.put("pageNum",1);
-                byte[] headerBytes=changeJSONObjectToBytes(fileHeader);
-                byte[] page=new byte[PAGE_SIZE];
-                System.arraycopy(headerBytes,0,page,0,headerBytes.length);
-                fm.createPage(fileId,page);
-                fm.closeFile(fileId);
-            }
-            catch(IOException e){
-                e.printStackTrace();
-            }
-        }
-
+        int fileId=fm.createFile(filename);
+        int recordPerPage= Header.calPageCapacity(recordLen);
+        int bitmapLength=Header.calBitmapLength(recordPerPage);
+        JSONObject fileHeader=new JSONObject();
+        fileHeader.put("recordNum",0);
+        fileHeader.put("recordLen",recordLen);
+        fileHeader.put("recordPerPage",recordPerPage);
+        fileHeader.put("bitmapLength",bitmapLength);
+        fileHeader.put("filename",filename);
+        fileHeader.put("nextVacancyPage",0);
+        fileHeader.put("pageNum",1);
+        byte[] headerBytes=changeJSONObjectToBytes(fileHeader);
+        byte[] page=new byte[PAGE_SIZE];
+        System.arraycopy(headerBytes,0,page,0,headerBytes.length);
+        fm.createPage(fileId,page);
+        fm.closeFile(fileId);
     }
     public void deleteFile(String filename)
     {
@@ -119,12 +107,11 @@ public class RecordManager {
         }
     }
     public FileHandler openFile(String filename){
-        if(openFiles.keySet().contains(filename))
+        if(openFiles.containsKey(filename))
             return openFiles.get(filename);
         int fileId=fm.openFile(filename);
         byte[] header=fm.readPage(fileId,0);
         JSONObject fileHeader=changeBytesToJsonObject(header);
-        System.out.println(fileHeader);
         FileHandler handler=new FileHandler(filename,fileId,fileHeader,fm);
         openFiles.put(filename,handler);
         return handler;
@@ -136,7 +123,7 @@ public class RecordManager {
             return;
         if(handler.getModifyHeader()) {
             JSONObject newHeader=handler.getFileHeader();
-            System.out.println(newHeader);
+            log.info("File {} has header {}", filename, newHeader);
             byte[] headerBytes=changeJSONObjectToBytes(newHeader);
             byte[] page=new byte[PAGE_SIZE];
             System.arraycopy(headerBytes,0,page,0,headerBytes.length);

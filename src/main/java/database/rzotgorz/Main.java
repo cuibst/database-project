@@ -27,51 +27,47 @@ public class Main {
     }
 
     public static void main(String[] args) {
-//        String[] testStrings = {
-//                "CREATE DATABASE student;",
-//                "ABC 123"
-//        };
-//
-//        for(String s : testStrings) {
-//            log.info("Input: {}", s);
-//            run(s);
-//        }
-//
-//        FileManager manager = new FileManager();
-//        int fid1 = manager.openFile("test1.txt");
-//        int fid2 = manager.openFile("test2.txt");
-//        for(int pageId = 0; pageId < 256; pageId ++) {
-//            byte[] data = manager.getPageRef(fid1, pageId); //"mark as dirty" has been done in getPageRef
-//            data[0] = (byte)pageId;
-//            data[1] = (byte)fid1;
-//
-//            data = manager.getPageRef(fid2, pageId);
-//            data[0] = (byte)pageId;
-//            data[1] = (byte)fid2;
-//        }
-//
-//        manager.printPageData();
-//
-//        for(int pageId = 0; pageId < 256; pageId ++) {
-//            byte[] data = manager.getPageData(fid1, pageId);
-//            log.info("From fid:{} pid:{} read: {}, {}", fid1, pageId, data[0], data[1]);
-//            manager.access(fid1, pageId);
-//            data = manager.getPageData(fid2, pageId);
-//            log.info("From fid:{} pid:{} read: {}, {}", fid2, pageId, data[0], data[1]);
-//            manager.access(fid2, pageId);
-//        }
-//
+        String[] testStrings = {
+                "CREATE DATABASE student;",
+                "ABC 123"
+        };
+
+        for(String s : testStrings) {
+            log.info("Input: {}", s);
+            run(s);
+        }
+
+        FileManager manager = new FileManager();
+        int fid1 = manager.openFile("test1.txt");
+        int fid2 = manager.openFile("test2.txt");
+        for(int pageId = 0; pageId < 256; pageId ++) {
+            byte[] data = manager.getPageRef(fid1, pageId); //"mark as dirty" has been done in getPageRef
+            data[0] = (byte)pageId;
+            data[1] = (byte)fid1;
+
+            data = manager.getPageRef(fid2, pageId);
+            data[0] = (byte)pageId;
+            data[1] = (byte)fid2;
+        }
+
+        manager.printPageData();
+
+        for(int pageId = 0; pageId < 10; pageId ++) {
+            byte[] data = manager.getPageData(fid1, pageId);
+            log.info("From fid:{} pid:{} read: {}, {}", fid1, pageId, data[0], data[1]);
+            manager.access(fid1, pageId);
+            data = manager.getPageData(fid2, pageId);
+            log.info("From fid:{} pid:{} read: {}, {}", fid2, pageId, data[0], data[1]);
+            manager.access(fid2, pageId);
+        }
+
         RecordManager rm=new RecordManager();
         rm.createFile("llh.dat",4);
         FileHandler handler=rm.openFile("llh.dat");
-//        int pageId=handler.createPage();
         byte[] bytes=ByteIntegerConverter.intToBytes(22);
         for(int i=0;i<1640;i++)
-        handler.insertRecord(bytes);
-////        handler.deletePage(new RID(1,0));
+            handler.insertRecord(bytes);
         rm.closeFile("llh.dat");
-//        handler=rm.openFile("llh.dat");
-//        handler.insertRecord(bytes);
-//        rm.closeFile("llh.dat");
+
     }
 }
