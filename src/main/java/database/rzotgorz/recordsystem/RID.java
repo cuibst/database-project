@@ -13,6 +13,11 @@ public class RID {
         this.slotId=slotId;
     }
 
+    public RID(long pageId,long slotId){
+        this.pageId=(int)pageId;
+        this.slotId=(int)slotId;
+    }
+
     public int getPageId() {
         return pageId;
     }
