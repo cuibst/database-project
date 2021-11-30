@@ -86,17 +86,29 @@ public class FileIndex {
             InterNode root = new InterNode(newPageId, -1, new ArrayList<>(), new ArrayList<>(), indexHandler);
             this.rootNode.parentId = newPageId;
             int newPageStoreId = indexHandler.createNewPage();
+//            System.out.println(rootNode.getChildKeys());
             JSONObject object = this.rootNode.split();
             long minKey = rootNode.childKeys.get(0);
             List<Long> newKeys = (ArrayList<Long>) object.get("newKeys");
-            List<TreeNode> newNodes = (ArrayList<TreeNode>) object.get("newNodes");
+            List<TreeNode> newNodes = (ArrayList<TreeNode>) object.get("newVal");
             InterNode node = new InterNode(newPageStoreId, newPageId, newNodes, newKeys, indexHandler);
             long maxKey = Integer.parseInt(object.get("maxKey").toString());
             root.childKeys.add(minKey);
             root.childKeys.add(maxKey);
+//            log.info("maxKey:{},minKey:{}", maxKey, minKey);
+//            System.out.println(newKeys);
+//            System.out.println(rootNode.getChildKeys());
+//            System.out.println(root.childKeys);
+//            if (root.childNodes == null)
+//                log.info("in here");
+//            if (((InterNode) rootNode).childNodes == null)
+//                log.info("in here");
+            if (newNodes == null)
+                log.info("in here");
             root.addChildNodes(this.rootNode);
             root.addChildNodes(node);
             this.rootNode = root;
+            this.rootId = newPageId;
         }
     }
 

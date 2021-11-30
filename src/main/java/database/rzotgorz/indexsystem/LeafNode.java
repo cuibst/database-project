@@ -31,6 +31,7 @@ public class LeafNode extends TreeNode {
 
 
     public JSONObject split() {
+//        log.info("LeafNode split");
         int mid = (int) Math.floor((childKeys.size() + 1) / 2.0);
         ArrayList<Long> newKeys = new ArrayList<>();
         newKeys.addAll(this.childKeys.subList(mid, childKeys.size()));

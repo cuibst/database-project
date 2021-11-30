@@ -49,9 +49,11 @@ public class Main {
         FileIndex fileIndex = indexManager.createIndex("llh", "llhTest");
         IndexHandler indexHandler = indexManager.getHandler("llh");
 
-        for (int i = 0; i < 30; i++)
-            for (int j = 0; j < 30; j++)
+        for (int i = 0; i < 3000; i++)
+            for (int j = 0; j < 30; j++) {
+//                log.info("i: {} , j: {}", i, j);
                 fileIndex.insert(i * 30 + j, new RID(i, j));
+            }
 //        indexManager.shutdown();
 //        fileIndex.remove(340, new RID(11, 10));
         int rootId = fileIndex.getRootId();
@@ -71,10 +73,20 @@ public class Main {
 
 
         System.out.println(fileIndex.getRootNode().getChildKeys());
-        fileIndex.range(20, 500);
+//        fileIndex.range(20, 500);
         for (int i = 0; i < fileIndex.getRootNode().getChildKeys().size(); i++) {
-            System.out.println((((InterNode) (fileIndex.getRootNode())).childNodes.get(i).getChildKeys()));
+            if (((InterNode) fileIndex.getRootNode()).childNodes.get(i).getClass() == InterNode.class) {
+                System.out.println((((InterNode) (fileIndex.getRootNode())).childNodes.get(i).getChildKeys()));
+            }
         }
+//        for (int i = 0; i < fileIndex.getRootNode().getChildKeys().size(); i++) {
+//            if (((InterNode) fileIndex.getRootNode()).childNodes.get(i).getClass() == InterNode.class) {
+//                System.out.println("in here");
+//                System.out.println(((InterNode) (((InterNode) (fileIndex.getRootNode())).childNodes.get(i))).getChildKeysSize());
+//            }
+//        }
+
+        System.out.println("finished");
         indexManager.shutdown();
 //        String[] testStrings = {
 //                "CREATE DATABASE student;",
