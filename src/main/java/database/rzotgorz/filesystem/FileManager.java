@@ -5,7 +5,9 @@ import database.rzotgorz.exceptions.FailToOpenException;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.*;
 
 @Slf4j
@@ -21,7 +23,8 @@ public class FileManager {
             this.fileId = fileId;
         }
 
-        public Page() {}
+        public Page() {
+        }
 
         @Override
         public boolean equals(Object o) {
@@ -64,25 +67,25 @@ public class FileManager {
     public FileManager() {
         idToFilename = new String[MAX_FILE_NUM];
         remainingId = new LinkedList<>();
-        for(int i = 0; i< MAX_FILE_NUM; i++)
+        for (int i = 0; i < MAX_FILE_NUM; i++)
             remainingId.add(i);
         filenameToId = new HashMap<>();
         cachedPages = new Set[MAX_FILE_NUM];
         controller = new LRUListController(CACHE_CAPACITY);
         dirty = new boolean[CACHE_CAPACITY];
         indexToPage = new Page[CACHE_CAPACITY];
-        for(int i=0;i<CACHE_CAPACITY;i++)
+        for (int i = 0; i < CACHE_CAPACITY; i++)
             indexToPage[i] = new Page();
         pageToIndex = new HashMap<>();
         pageBuffer = new byte[CACHE_CAPACITY][PAGE_SIZE];
 
         File dataDirectory = new File("data");
-        if(!dataDirectory.exists())
+        if (!dataDirectory.exists())
             dataDirectory.mkdir();
     }
 
     private void access(int index) {
-        if(index == last)
+        if (index == last)
             return;
         controller.access(index);
         last = index;
@@ -90,7 +93,7 @@ public class FileManager {
 
     public void access(int fileId, int pageId) {
         Page page = new Page(pageId, fileId);
-        if(pageToIndex.containsKey(page))
+        if (pageToIndex.containsKey(page))
             access(pageToIndex.get(page));
     }
 
@@ -109,16 +112,16 @@ public class FileManager {
     }
 
     private void writeBack(int index) {
-        if(dirty[index])
+        if (dirty[index])
             writePage(indexToPage[index].fileId, indexToPage[index].pageId, pageBuffer[index]);
         free(index);
     }
 
     public int createFile(String filename) {
-        if(filenameToId.containsKey(filename))
+        if (filenameToId.containsKey(filename))
             throw new AlreadyOpenedException(filename);
         File file = new File("." + File.separator + "data" + File.separator + filename);
-        if(file.exists())
+        if (file.exists())
             file.delete();
         int id = remainingId.poll();
         cachedPages[id] = new HashSet<>();
@@ -128,9 +131,9 @@ public class FileManager {
     }
 
     public int openFile(String filename) {
-        if(filenameToId.containsKey(filename))
+        if (filenameToId.containsKey(filename))
             throw new AlreadyOpenedException(filename);
-        try(RandomAccessFile file = new RandomAccessFile("." + File.separator + "data" + File.separator + filename, "rw")) {
+        try (RandomAccessFile file = new RandomAccessFile("." + File.separator + "data" + File.separator + filename, "rw")) {
             int id = remainingId.poll();
             cachedPages[id] = new HashSet<>();
             filenameToId.put(filename, id);
@@ -145,12 +148,12 @@ public class FileManager {
     public void closeFile(int fileId) {
         Set<Page> pages = cachedPages[fileId];
         cachedPages[fileId] = new HashSet<>();
-        for(Page page : pages) {
+        for (Page page : pages) {
             int index = pageToIndex.get(page);
             pageToIndex.remove(page);
             indexToPage[index] = new Page();
             controller.free(index);
-            if(dirty[index]) {
+            if (dirty[index]) {
                 writePage(page.fileId, page.pageId, pageBuffer[index]);
                 dirty[index] = false;
             }
@@ -161,10 +164,10 @@ public class FileManager {
     }
 
     public byte[] readPage(int fileId, int pageId) {
-        long offset = ((long)pageId) << PAGE_SIZE_LOG_2;
+        long offset = ((long) pageId) << PAGE_SIZE_LOG_2;
         String filename = idToFilename[fileId];
         byte[] result = new byte[PAGE_SIZE];
-        try(RandomAccessFile file = new RandomAccessFile("." + File.separator + "data" + File.separator + filename, "rw")) {
+        try (RandomAccessFile file = new RandomAccessFile("." + File.separator + "data" + File.separator + filename, "rw")) {
             file.seek(offset);
             file.read(result);
         } catch (IOException e) {
@@ -175,7 +178,7 @@ public class FileManager {
 
     public void writePage(int fileId, int pageId, byte[] buf) {
         try (RandomAccessFile file = new RandomAccessFile("." + File.separator + "data" + File.separator + idToFilename[fileId], "rw")) {
-            long offset = ((long)pageId) << PAGE_SIZE_LOG_2;
+            long offset = ((long) pageId) << PAGE_SIZE_LOG_2;
             file.seek(offset);
             file.write(buf);
         } catch (IOException e) {
@@ -185,6 +188,7 @@ public class FileManager {
 
     public int createPage(int fileId, byte[] data) {
         long length = -1;
+//        log.info("in here");
         try (RandomAccessFile file = new RandomAccessFile("." + File.separator + "data" + File.separator + idToFilename[fileId], "rw")) {
             length = file.length();
             file.seek(length);
@@ -192,17 +196,17 @@ public class FileManager {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return (int)(length >> PAGE_SIZE_LOG_2);
+        return (int) (length >> PAGE_SIZE_LOG_2);
     }
 
-   private byte[] getPage(int fileId, int pageId) {
+    private byte[] getPage(int fileId, int pageId) {
         Page page = new Page(pageId, fileId);
-        if(pageToIndex.containsKey(page))
+        if (pageToIndex.containsKey(page))
             return pageBuffer[pageToIndex.get(page)];
 
         int index = controller.findFreeNodeId();
         Page lastPage = indexToPage[index];
-        if(!lastPage.isEmpty())
+        if (!lastPage.isEmpty())
             writeBack(index);
         pageToIndex.put(page, index);
         cachedPages[fileId].add(page);
@@ -216,7 +220,7 @@ public class FileManager {
     public void putPage(int fileId, int pageId, byte[] data) {
         Page page = new Page(pageId, fileId);
         int index;
-        if(!pageToIndex.containsKey(page)) {
+        if (!pageToIndex.containsKey(page)) {
             getPage(fileId, pageId);
         }
         index = pageToIndex.get(page);
@@ -238,8 +242,8 @@ public class FileManager {
     }
 
     public void releaseCache() {
-        for(int i = 0; i< CACHE_CAPACITY; i++) {
-            if(dirty[i]) {
+        for (int i = 0; i < CACHE_CAPACITY; i++) {
+            if (dirty[i]) {
                 writeBack(i);
                 Arrays.fill(pageBuffer[i], (byte) 0);
             }
@@ -256,7 +260,7 @@ public class FileManager {
     }
 
     public void printPageData() {
-        for(Map.Entry<Page, Integer> entry : pageToIndex.entrySet()) {
+        for (Map.Entry<Page, Integer> entry : pageToIndex.entrySet()) {
             log.info("Entry: fid:{} pid:{} index:{}", entry.getKey().fileId, entry.getKey().pageId, entry.getValue());
         }
     }
