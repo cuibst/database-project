@@ -3,9 +3,11 @@ package database.rzotgorz.metaSystem;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.Serializable;
+
 @Data
 @Slf4j
-public class ColumnInfo {
+public class ColumnInfo implements Serializable {
     private String type;
     private String name;
     private int size;

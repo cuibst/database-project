@@ -13,7 +13,7 @@ public class MetaHandler {
 
     public MetaHandler(String dbName) throws IOException {
         this.dbName = dbName;
-        this.location = "." + File.separator + "meta" + File.separator;
+        this.location = "." + File.separator + "data" + File.separator;
         File file = new File(this.location + this.dbName + ".meta");
         if (file.exists())
             this.load();

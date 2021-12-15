@@ -18,13 +18,18 @@ public class DbInfo implements Serializable {
 
     public DbInfo(String name, ArrayList<TableInfo> tableInfos) {
         this.name = name;
+        this.tbMap = new HashMap<>();
+//        if (this.tbMap == null)
+//            log.info("yes");
         for (int i = 0; i < tableInfos.size(); i++) {
             this.tbMap.put(tableInfos.get(i).getName(), tableInfos.get(i));
-            this.index = new HashMap<>();
         }
+        this.index = new HashMap<>();
     }
 
     public void insertTable(String name, TableInfo tableInfo) {
+        if (this.tbMap == null)
+            log.info("yes");
         if (this.tbMap.containsKey(name))
             throw new RuntimeException(String.format("Table name :{} already exits", name));
         this.tbMap.put(name, tableInfo);

@@ -11,13 +11,18 @@ public class MetaManager {
 
     public MetaManager() {
         metaMap = new HashMap<>();
-        this.homeDir = "." + File.separator + "meta" + File.separator;
+        this.homeDir = "." + File.separator + "data" + File.separator;
     }
 
-    public MetaHandler openMeta(String dbName) throws IOException {
+    public MetaHandler openMeta(String dbName) {
+        System.out.println(this.metaMap.toString());
         if (!this.metaMap.containsKey(dbName)) {
-            MetaHandler metaHandler = new MetaHandler(dbName);
-            this.metaMap.put(dbName, metaHandler);
+            try {
+                MetaHandler metaHandler = new MetaHandler(dbName);
+                this.metaMap.put(dbName, metaHandler);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         return this.metaMap.get(dbName);
     }

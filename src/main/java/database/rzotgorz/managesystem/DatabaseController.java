@@ -5,7 +5,6 @@ import database.rzotgorz.managesystem.results.DatabaseChangeResult;
 import database.rzotgorz.managesystem.results.ListResult;
 import database.rzotgorz.managesystem.results.MessageResult;
 import database.rzotgorz.managesystem.results.ResultItem;
-import database.rzotgorz.metaSystem.ColumnInfo;
 import database.rzotgorz.metaSystem.MetaHandler;
 import database.rzotgorz.metaSystem.MetaManager;
 import database.rzotgorz.metaSystem.TableInfo;
@@ -23,7 +22,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.NotDirectoryException;
-import java.util.*;
+import java.util.BitSet;
+import java.util.HashSet;
+import java.util.Set;
 
 @Slf4j
 public class DatabaseController {
@@ -39,7 +40,7 @@ public class DatabaseController {
         return databases;
     }
 
-    public DatabaseController (SQLTreeVisitor visitor) throws NotDirectoryException {
+    public DatabaseController(SQLTreeVisitor visitor) throws NotDirectoryException {
         recordManager = new RecordManager();
         indexManager = new IndexManager(recordManager.getFileManager());
         metaManager = new MetaManager();
@@ -48,10 +49,10 @@ public class DatabaseController {
         visitor.controller = this;
 
         File rootDirectory = new File(rootPath);
-        if(!rootDirectory.isDirectory())
+        if (!rootDirectory.isDirectory())
             throw new NotDirectoryException("Path 'data' has already been used by a file");
         File[] files = rootDirectory.listFiles();
-        if(files != null && files.length > 0 && files[0] != null)
+        if (files != null && files.length > 0 && files[0] != null)
             for (File file : files)
                 databases.add(file.getName());
     }
@@ -61,11 +62,11 @@ public class DatabaseController {
     }
 
     private String getTablePath(String tableName) {
-        return rootPath + File.separator + currentUsingDatabase + File.separator + tableName;
+        return currentUsingDatabase + File.separator + tableName;
     }
 
     public void createDatabase(String name) throws FileAlreadyExistsException {
-        if(databases.contains(name)) {
+        if (databases.contains(name)) {
             throw new FileAlreadyExistsException("Database " + name + " already exists!");
         }
         String databasePath = getDatabasePath(name);
@@ -76,7 +77,7 @@ public class DatabaseController {
     }
 
     public DatabaseChangeResult useDatabase(String name) throws FileNotFoundException {
-        if(!databases.contains(name)) {
+        if (!databases.contains(name)) {
             throw new FileNotFoundException("Database " + name + " doesn't exist");
         }
         currentUsingDatabase = name;
@@ -84,33 +85,33 @@ public class DatabaseController {
     }
 
     public DatabaseChangeResult dropDatabase(String name) throws FileNotFoundException {
-        if(!databases.contains(name))
+        if (!databases.contains(name))
             throw new FileNotFoundException("Database " + name + " doesn't exist!");
         File databaseDirectory = new File(getDatabasePath(name));
         assert databaseDirectory.exists() && databaseDirectory.isDirectory();
         indexManager.closeHandler(name);
         metaManager.closeMeta(name);
         File[] files = databaseDirectory.listFiles();
-        if(files != null && files.length > 0 && files[0] != null)
+        if (files != null && files.length > 0 && files[0] != null)
             for (File file : files) {
                 recordManager.closeFile(file.getName());
                 file.delete();
             }
         databaseDirectory.delete();
         databases.remove(name);
-        if(currentUsingDatabase.equals(name))
+        if (currentUsingDatabase.equals(name))
             return new DatabaseChangeResult("null");
         return null;
     }
 
     public ResultItem showTables() {
-        if(currentUsingDatabase == null)
+        if (currentUsingDatabase == null)
             return new MessageResult("No database is selected.", true);
         File databaseDirectory = new File(getDatabasePath(currentUsingDatabase));
         assert databaseDirectory.exists() && databaseDirectory.isDirectory();
         Set<String> tables = new HashSet<>();
         File[] files = databaseDirectory.listFiles();
-        if(files != null && files.length > 0 && files[0] != null)
+        if (files != null && files.length > 0 && files[0] != null)
             for (File file : files) {
                 tables.add(file.getName());
             }
@@ -118,24 +119,20 @@ public class DatabaseController {
     }
 
     public ResultItem createTable(TableInfo bundle) {
-        if(currentUsingDatabase == null)
+        if (currentUsingDatabase == null)
             return new MessageResult("No database is being used!", true);
-        try {
-            MetaHandler handler = metaManager.openMeta(currentUsingDatabase);
-            handler.addTable(bundle);
-            int recordLength = bundle.getTotalSize();
-            recordManager.createFile(getTablePath(bundle.getName()), recordLength);
-            return new MessageResult("ok");
-        } catch (IOException e) {
-            return new MessageResult(e.getMessage(), true);
-        }
+        MetaHandler handler = metaManager.openMeta(currentUsingDatabase);
+        handler.addTable(bundle);
+        int recordLength = bundle.getTotalSize();
+        recordManager.createFile(getTablePath(bundle.getName()), recordLength);
+        return new MessageResult("ok");
     }
 
     public void addForeignKey(String tableName, SQLTreeVisitor.ForeignKey foreignKey, String keyName) throws IOException {
         MetaHandler handler = metaManager.openMeta(currentUsingDatabase);
         handler.addForeign(foreignKey.targetTable, foreignKey.name, keyName);
         String indexName = keyName == null ? (foreignKey.targetTable + "." + foreignKey.name) : keyName;
-        if(!handler.existsIndex(indexName))
+        if (!handler.existsIndex(indexName))
             handler.createIndex(indexName, foreignKey.targetTable, foreignKey.name);
     }
 

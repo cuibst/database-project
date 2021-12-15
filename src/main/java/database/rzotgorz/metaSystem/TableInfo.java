@@ -4,6 +4,7 @@ import database.rzotgorz.recordsystem.Record;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -11,7 +12,7 @@ import java.util.Map;
 
 @Data
 @Slf4j
-public class TableInfo {
+public class TableInfo implements Serializable {
     private String name;
     private Map<String, ColumnInfo> columns;
     private String primary;
@@ -24,7 +25,8 @@ public class TableInfo {
     private int totalSize;
 
     public TableInfo(String name, Map<String, ColumnInfo> columns) {
-        this.name = name;
+        String[] names = name.split("\\\\");
+        this.name = names[0];
         this.columns = columns;
         this.primary = "";
         this.foreign = new HashMap<>();

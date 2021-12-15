@@ -4,6 +4,7 @@ import database.rzotgorz.managesystem.DatabaseController;
 import database.rzotgorz.managesystem.SQLTreeVisitor;
 import database.rzotgorz.managesystem.results.MessageResult;
 import database.rzotgorz.managesystem.results.ResultItem;
+import database.rzotgorz.metaSystem.MetaManager;
 import database.rzotgorz.parser.SQLLexer;
 import database.rzotgorz.parser.SQLParser;
 import lombok.extern.slf4j.Slf4j;
@@ -11,7 +12,7 @@ import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 
-import java.io.*;
+import java.io.Serializable;
 import java.nio.file.NotDirectoryException;
 import java.util.ArrayList;
 
@@ -38,6 +39,9 @@ public class Main {
 
     public static void main(String[] args) {
 
+        MetaManager metaManager = new MetaManager();
+
+
         SQLTreeVisitor visitor = new SQLTreeVisitor();
         DatabaseController controller;
         try {
@@ -46,14 +50,14 @@ public class Main {
             log.error(e.getMessage());
             return;
         }
-
-        Object e = controller.execute("CREATE DATABASE test;");
-        printResults(e);
-        e = controller.execute("CREATE DATABASE hello_world;");
-        printResults(e);
-        e = controller.execute("SHOW DATABASES;");
-        printResults(e);
-        e = controller.execute("SHOW TABLES;");
+//
+//        Object e = controller.execute("CREATE DATABASE test;");
+//        printResults(e);
+//        e = controller.execute("CREATE DATABASE hello_world;");
+//        printResults(e);
+//        e = controller.execute("SHOW DATABASES;");
+//        printResults(e);
+        Object e = controller.execute("SHOW TABLES;");
         printResults(e);
         e = controller.execute("USE test;");
         printResults(e);
@@ -63,6 +67,7 @@ public class Main {
         printResults(e);
         e = controller.execute("SHOW TABLES;");
         printResults(e);
+
 
 //        ArrayList<String> list = new ArrayList<>();
 //        list.add("1");
@@ -88,7 +93,7 @@ public class Main {
 //        } catch (IOException | ClassNotFoundException e) {
 //            e.printStackTrace();
 //        }
-        
+
         //        FileManager fileManager = new FileManager();
 //        IndexManager indexManager = new IndexManager(fileManager, "llh");
 //        FileIndex fileIndex = indexManager.createIndex("llh", "llhTest");
@@ -177,10 +182,10 @@ public class Main {
     }
 
     private static void printResults(Object e) {
-        if(e != null) {
-            if(e.getClass() == MessageResult.class) {
+        if (e != null) {
+            if (e.getClass() == MessageResult.class) {
                 System.out.println(e);
-                System.out.println("Result received in " + ((ResultItem)e).cost + "ms.");
+                System.out.println("Result received in " + ((ResultItem) e).cost + "ms.");
                 System.out.println("=".repeat(30));
             } else {
                 boolean flag = false;
