@@ -24,10 +24,15 @@ import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.NotDirectoryException;
 import java.util.BitSet;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Slf4j
 public class DatabaseController {
+
+    public final static String TABLE_SUFFIX = ".table";
+    public final static String INDEX_SUFFIX = ".index";
+
     private final RecordManager recordManager;
     private final IndexManager indexManager;
     private final MetaManager metaManager;
@@ -62,7 +67,7 @@ public class DatabaseController {
     }
 
     private String getTablePath(String tableName) {
-        return currentUsingDatabase + File.separator + tableName;
+        return currentUsingDatabase + File.separator + tableName + TABLE_SUFFIX;
     }
 
     public void createDatabase(String name) throws FileAlreadyExistsException {
@@ -113,7 +118,8 @@ public class DatabaseController {
         File[] files = databaseDirectory.listFiles();
         if (files != null && files.length > 0 && files[0] != null)
             for (File file : files) {
-                tables.add(file.getName());
+                if(file.getName().endsWith(TABLE_SUFFIX))
+                    tables.add(file.getName().substring(0, file.getName().length() - TABLE_SUFFIX.length()));
             }
         return new ListResult(tables, "TABLES");
     }
@@ -128,6 +134,15 @@ public class DatabaseController {
         return new MessageResult("ok");
     }
 
+    public ResultItem dropTable(String tableName) {
+        if (currentUsingDatabase == null)
+            return new MessageResult("No database is being used!", true);
+        MetaHandler handler = metaManager.openMeta(currentUsingDatabase);
+        handler.removeTable(tableName);
+        recordManager.deleteFile(getTablePath(tableName));
+        return new MessageResult("ok");
+    }
+
     public void addForeignKey(String tableName, SQLTreeVisitor.ForeignKey foreignKey, String keyName) throws IOException {
         MetaHandler handler = metaManager.openMeta(currentUsingDatabase);
         handler.addForeign(foreignKey.targetTable, foreignKey.name, keyName);
@@ -137,10 +152,27 @@ public class DatabaseController {
     }
 
     //FIXME: primary key can be multi-field
-//    public void setPrimaryKey(String tableName, List<String> primaryKeyFields) {
-//        MetaHandler handler = metaManager.openMeta(tableName);
-//        handler.setPrimary();
-//    }
+    public void setPrimaryKey(String tableName, List<String> primaryKeyFields) {
+        MetaHandler handler = metaManager.openMeta(tableName);
+        handler.setPrimary(tableName, primaryKeyFields.get(0));
+    }
+
+    private static class InfoAndHandler {
+        public TableInfo info;
+        public MetaHandler handler;
+
+        public InfoAndHandler(TableInfo info, MetaHandler handler) {
+            this.info = info;
+            this.handler = handler;
+        }
+    }
+
+    public InfoAndHandler getTableInfo(String tableName) {
+        if(currentUsingDatabase == null)
+            throw new RuntimeException("No using database!");
+        MetaHandler handler = metaManager.openMeta(currentUsingDatabase);
+        return new InfoAndHandler(handler.getTable(tableName), handler);
+    }
 
     public static class ErrorListener implements ANTLRErrorListener {
         @Override
@@ -165,6 +197,7 @@ public class DatabaseController {
     }
 
     public Object execute(String sql) {
+        System.out.printf("Executing: %s%n", sql);
         visitor.getTimeDelta();
         CharStream stream = CharStreams.fromString(sql);
         SQLLexer lexer = new SQLLexer(stream);

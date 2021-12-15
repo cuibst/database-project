@@ -1,6 +1,5 @@
 package database.rzotgorz.managesystem;
 
-import database.rzotgorz.Main;
 import database.rzotgorz.exceptions.ParseError;
 import database.rzotgorz.managesystem.results.ListResult;
 import database.rzotgorz.managesystem.results.MessageResult;
@@ -15,7 +14,6 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.FileAlreadyExistsException;
-import java.text.ParseException;
 import java.util.*;
 
 @Slf4j
@@ -54,7 +52,6 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
                     results.add(result);
                 }
             } catch (Exception e) {
-                e.printStackTrace();
                 ResultItem errorResult = new MessageResult(e.getMessage(), true);
                 errorResult.cost = getTimeDelta();
                 results.add(errorResult);
@@ -156,13 +153,15 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
         } catch (IOException e) {
             return new MessageResult(e.getMessage(), true);
         }
-//        controller.setPrimaryKey(tableName, bundle.primaryKey);
+        if(bundle.primaryKey != null)
+            controller.setPrimaryKey(tableName, bundle.primaryKey.fields);
         return new MessageResult("ok");
     }
 
     @Override
     public Object visitDrop_table(SQLParser.Drop_tableContext ctx) {
-        return super.visitDrop_table(ctx);
+        String tableName = ctx.Identifier().getText();
+        return controller.dropTable(tableName);
     }
 
     @Override
