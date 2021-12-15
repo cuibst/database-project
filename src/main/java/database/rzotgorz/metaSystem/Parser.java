@@ -106,7 +106,7 @@ public class Parser {
         }
     }
 
-    public static byte[] encode(ArrayList<Integer> sizeList, ArrayList<String> typeList, int totalSize, ArrayList<String> valueList) {
+    public static byte[] encode(List<Integer> sizeList, List<String> typeList, int totalSize, List<String> valueList) {
         assert (valueList.size() == sizeList.size());
         byte[] data = new byte[totalSize];
         byte b = 0;
@@ -185,7 +185,7 @@ public class Parser {
         }
     }
 
-    public static Map<Integer, String> decode(ArrayList<Integer> sizeList, ArrayList<String> typeList, int totalList, Record record) throws UnsupportedEncodingException {
+    public static Map<Integer, String> decode(List<Integer> sizeList, List<String> typeList, int totalList, Record record) throws UnsupportedEncodingException {
         byte[] data = record.getData();
         assert (sizeList.size() == typeList.size());
         int pos = 0;

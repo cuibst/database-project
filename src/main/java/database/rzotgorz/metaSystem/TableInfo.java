@@ -8,6 +8,7 @@ import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Data
@@ -15,12 +16,12 @@ import java.util.Map;
 public class TableInfo implements Serializable {
     private String name;
     private Map<String, ColumnInfo> columns;
-    private ArrayList<String> primary;
+    private List<String> primary;
     private Map<String, String> foreign;
-    private ArrayList<String> index;
+    private List<String> index;
     private HashMap<String, String> unique;
-    private ArrayList<Integer> sizeList;
-    private ArrayList<String> typeList;
+    private List<Integer> sizeList;
+    private List<String> typeList;
     private HashMap<String, Integer> colIndex;
     private int totalSize;
 
@@ -101,11 +102,11 @@ public class TableInfo implements Serializable {
         this.unique.put(col, unique);
     }
 
-    public byte[] buildRecord(ArrayList<String> list) {
+    public byte[] buildRecord(List<String> list) {
         return Parser.encode(this.sizeList, this.typeList, this.totalSize, list);
     }
 
-    public void setPrimary(ArrayList array) {
+    public void setPrimary(List array) {
         this.primary = array;
     }
 

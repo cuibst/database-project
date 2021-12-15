@@ -119,7 +119,7 @@ public class DatabaseController {
         File[] files = databaseDirectory.listFiles();
         if (files != null && files.length > 0 && files[0] != null)
             for (File file : files) {
-                if(file.getName().endsWith(TABLE_SUFFIX))
+                if (file.getName().endsWith(TABLE_SUFFIX))
                     tables.add(file.getName().substring(0, file.getName().length() - TABLE_SUFFIX.length()));
             }
         return new ListResult(tables, "TABLES");
@@ -155,7 +155,7 @@ public class DatabaseController {
     //FIXME: primary key can be multi-field
     public void setPrimaryKey(String tableName, List<String> primaryKeyFields) {
         MetaHandler handler = metaManager.openMeta(tableName);
-        handler.setPrimary(tableName, primaryKeyFields.get(0));
+        handler.setPrimary(tableName, primaryKeyFields);
     }
 
     private static class InfoAndHandler {
@@ -169,7 +169,7 @@ public class DatabaseController {
     }
 
     public InfoAndHandler getTableInfo(String tableName) {
-        if(currentUsingDatabase == null)
+        if (currentUsingDatabase == null)
             throw new RuntimeException("No using database!");
         MetaHandler handler = metaManager.openMeta(currentUsingDatabase);
         return new InfoAndHandler(handler.getTable(tableName), handler);

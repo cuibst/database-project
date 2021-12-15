@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSONObject;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 public class MetaHandler {
@@ -101,7 +102,7 @@ public class MetaHandler {
         return this.dbInfo.getIndexInfo(indexName);
     }
 
-    public void setPrimary(String tbName, ArrayList primary) {
+    public void setPrimary(String tbName, List primary) {
         this.dbInfo.getTbMap().get(tbName).setPrimary(primary);
         this.dump();
     }
