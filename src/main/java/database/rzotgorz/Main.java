@@ -51,13 +51,13 @@ public class Main {
             return;
         }
 //
-//        Object e = controller.execute("CREATE DATABASE test;");
-//        printResults(e);
-//        e = controller.execute("CREATE DATABASE hello_world;");
-//        printResults(e);
-//        e = controller.execute("SHOW DATABASES;");
-//        printResults(e);
-        Object e = controller.execute("SHOW TABLES;");
+        Object e = controller.execute("CREATE DATABASE test;");
+        printResults(e);
+        e = controller.execute("CREATE DATABASE hello_world;");
+        printResults(e);
+        e = controller.execute("SHOW DATABASES;");
+        printResults(e);
+        e = controller.execute("SHOW TABLES;");
         printResults(e);
         e = controller.execute("USE test;");
         printResults(e);

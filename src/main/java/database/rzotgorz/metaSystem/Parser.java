@@ -102,7 +102,7 @@ public class Parser {
                 }
             }
             default:
-                throw new TypeException(String.format("Invalid Type :{}", type));
+                throw new TypeException(String.format("Invalid Type : %s", type));
         }
     }
 
@@ -130,7 +130,7 @@ public class Parser {
                     }
                     length = bytes.length;
                     if (length > sizeList.get(item)) {
-                        throw new TypeException(String.format("String length :{} is longer than VARCHAR[{}]", length, sizeList.get(item)));
+                        throw new TypeException(String.format("String length :%s is longer than VARCHAR[%s]", length, sizeList.get(item)));
                     }
                 }
             } else {
@@ -180,7 +180,7 @@ public class Parser {
                 return (data[0] == (byte) 0) ? null : (((Long) ByteLongConverter.bytes2Long(process)).toString());
             }
             default: {
-                throw new RuntimeException(String.format("Invalid Type :{}", type));
+                throw new RuntimeException(String.format("Invalid Type : %s", type));
             }
         }
     }
