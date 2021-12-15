@@ -1,5 +1,9 @@
 package database.rzotgorz;
 
+import database.rzotgorz.managesystem.DatabaseController;
+import database.rzotgorz.managesystem.SQLTreeVisitor;
+import database.rzotgorz.managesystem.results.MessageResult;
+import database.rzotgorz.managesystem.results.ResultItem;
 import database.rzotgorz.parser.SQLLexer;
 import database.rzotgorz.parser.SQLParser;
 import lombok.extern.slf4j.Slf4j;
@@ -8,6 +12,7 @@ import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 
 import java.io.*;
+import java.nio.file.NotDirectoryException;
 import java.util.ArrayList;
 
 @Slf4j
@@ -32,30 +37,57 @@ public class Main {
     }
 
     public static void main(String[] args) {
-        ArrayList<String> list = new ArrayList<>();
-        list.add("1");
-        list.add("2");
-        list.add("3");
-        try {
-            FileOutputStream ff = new FileOutputStream("h.txt");
-            ObjectOutputStream ss = new ObjectOutputStream(ff);
-            A a = new A("llh", list);
-            ss.writeObject(a);
-            ss.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        try {
-            ObjectInputStream ois = new ObjectInputStream(
-                    new BufferedInputStream(new FileInputStream(new File("h.txt"))));
-            A a = (A) ois.readObject();
-            ois.close();
-            System.out.println(a.name);
-            System.out.println(a.list);
 
-        } catch (IOException | ClassNotFoundException e) {
-            e.printStackTrace();
+        SQLTreeVisitor visitor = new SQLTreeVisitor();
+        DatabaseController controller;
+        try {
+            controller = new DatabaseController(visitor);
+        } catch (NotDirectoryException e) {
+            log.error(e.getMessage());
+            return;
         }
+
+        Object e = controller.execute("CREATE DATABASE test;");
+        printResults(e);
+        e = controller.execute("CREATE DATABASE hello_world;");
+        printResults(e);
+        e = controller.execute("SHOW DATABASES;");
+        printResults(e);
+        e = controller.execute("SHOW TABLES;");
+        printResults(e);
+        e = controller.execute("USE test;");
+        printResults(e);
+        e = controller.execute("SHOW TABLES;");
+        printResults(e);
+        e = controller.execute("CREATE TABLE scholars ( studentid INT, awardname VARCHAR(32) NOT NULL, awardtime INT);");
+        printResults(e);
+        e = controller.execute("SHOW TABLES;");
+        printResults(e);
+
+//        ArrayList<String> list = new ArrayList<>();
+//        list.add("1");
+//        list.add("2");
+//        list.add("3");
+//        try {
+//            FileOutputStream ff = new FileOutputStream("h.txt");
+//            ObjectOutputStream ss = new ObjectOutputStream(ff);
+//            A a = new A("llh", list);
+//            ss.writeObject(a);
+//            ss.close();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//        try {
+//            ObjectInputStream ois = new ObjectInputStream(
+//                    new BufferedInputStream(new FileInputStream(new File("h.txt"))));
+//            A a = (A) ois.readObject();
+//            ois.close();
+//            System.out.println(a.name);
+//            System.out.println(a.list);
+//
+//        } catch (IOException | ClassNotFoundException e) {
+//            e.printStackTrace();
+//        }
         
         //        FileManager fileManager = new FileManager();
 //        IndexManager indexManager = new IndexManager(fileManager, "llh");
@@ -142,5 +174,27 @@ public class Main {
 //            handler.insertRecord(bytes);
 //        rm.closeFile("llh.dat");
 
+    }
+
+    private static void printResults(Object e) {
+        if(e != null) {
+            if(e.getClass() == MessageResult.class) {
+                System.out.println(e);
+                System.out.println("Result received in " + ((ResultItem)e).cost + "ms.");
+                System.out.println("=".repeat(30));
+            } else {
+                boolean flag = false;
+                assert e.getClass() == ArrayList.class;
+                for (ResultItem resultItem : (ArrayList<ResultItem>) e) {
+                    if (!flag)
+                        flag = true;
+                    else
+                        System.out.println();
+                    System.out.println(resultItem);
+                    System.out.println("Result received in " + resultItem.cost + "ms.");
+                }
+                System.out.println("=".repeat(30));
+            }
+        }
     }
 }

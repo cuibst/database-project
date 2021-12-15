@@ -17,7 +17,12 @@ import java.util.ResourceBundle;
 @Slf4j
 @NoArgsConstructor
 public class RecordManager {
-    private FileManager fm = new FileManager();
+    private FileManager fm = new FileManager(); //FIXME: Who let you to open a fileManage yourself??
+
+    public FileManager getFileManager() {
+        return fm;
+    }
+
     private Map<String, FileHandler> openFiles = new HashMap<>();
     private static final ResourceBundle bundle = ResourceBundle.getBundle("configurations");
     private static final int PAGE_SIZE = Integer.parseInt(bundle.getString("PAGE_SIZE"));

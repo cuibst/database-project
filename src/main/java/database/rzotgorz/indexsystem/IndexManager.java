@@ -14,15 +14,21 @@ import java.util.Map;
 @Slf4j
 public class IndexManager {
     private FileManager fileManager;
-    private String dbName;
+//    private String dbName;
     private Map<String, IndexHandler> openedIndexHandlers;
     private Map<JSONObject, FileIndex> openedFileIndex;
 
-    public IndexManager(FileManager fm, String dbName) {
+//    public IndexManager(FileManager fm, String dbName) { //FIXME: What's the purpose of dbName??
+//        this.openedIndexHandlers = new HashMap<>();
+//        this.openedFileIndex = new HashMap<>();
+//        this.fileManager = fm;
+//        this.dbName = dbName;
+//    }
+
+    public IndexManager(FileManager fm) {
         this.openedIndexHandlers = new HashMap<>();
         this.openedFileIndex = new HashMap<>();
         this.fileManager = fm;
-        this.dbName = dbName;
     }
 
     public IndexHandler getHandler(String dbName) {
