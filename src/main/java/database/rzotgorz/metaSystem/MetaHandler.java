@@ -13,7 +13,7 @@ public class MetaHandler {
 
     public MetaHandler(String dbName) throws IOException {
         this.dbName = dbName;
-        this.location = "." + File.separator + "data" + File.separator;
+        this.location = "." + File.separator + "data" + File.separator + dbName + File.separator;
         File file = new File(this.location + this.dbName + ".meta");
         if (file.exists())
             this.load();
@@ -79,7 +79,7 @@ public class MetaHandler {
 
     public TableInfo getTable(String tbName) {
         if (!this.dbInfo.getTbMap().containsKey(tbName))
-            throw new RuntimeException(String.format("Can not find table named:{}", tbName));
+            throw new RuntimeException(String.format("Can not find table named: %s", tbName));
         return this.dbInfo.getTbMap().get(tbName);
     }
 
@@ -101,7 +101,7 @@ public class MetaHandler {
         return this.dbInfo.getIndexInfo(indexName);
     }
 
-    public void setPrimary(String tbName, String primary) {
+    public void setPrimary(String tbName, ArrayList primary) {
         this.dbInfo.getTbMap().get(tbName).setPrimary(primary);
         this.dump();
     }
@@ -128,7 +128,7 @@ public class MetaHandler {
 
     public void renameTable(String oldName, String newName) {
         if (!this.dbInfo.getTbMap().containsKey(oldName))
-            throw new RuntimeException(String.format("Can not find table named:{}", oldName));
+            throw new RuntimeException(String.format("Can not find table named:%s", oldName));
         TableInfo tableInfo = this.dbInfo.getTbMap().get(oldName);
         this.dbInfo.getTbMap().remove(oldName);
         this.dbInfo.getTbMap().put(newName, tableInfo);

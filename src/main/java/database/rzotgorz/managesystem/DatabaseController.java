@@ -59,7 +59,8 @@ public class DatabaseController {
         File[] files = rootDirectory.listFiles();
         if (files != null && files.length > 0 && files[0] != null)
             for (File file : files)
-                databases.add(file.getName());
+                if (file.isDirectory())
+                    databases.add(file.getName());
     }
 
     private String getDatabasePath(String name) {

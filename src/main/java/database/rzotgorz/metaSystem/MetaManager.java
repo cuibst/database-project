@@ -15,7 +15,6 @@ public class MetaManager {
     }
 
     public MetaHandler openMeta(String dbName) {
-        System.out.println(this.metaMap.toString());
         if (!this.metaMap.containsKey(dbName)) {
             try {
                 MetaHandler metaHandler = new MetaHandler(dbName);
@@ -39,7 +38,7 @@ public class MetaManager {
     }
 
     public void removeAll(String dbName) {
-        File file = new File(this.homeDir + dbName + ".meta");
+        File file = new File(this.homeDir + dbName + File.separator + dbName + ".meta");
         if (file.exists()) {
             file.delete();
         }
