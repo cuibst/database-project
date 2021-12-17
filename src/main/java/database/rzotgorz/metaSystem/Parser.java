@@ -138,6 +138,7 @@ public class Parser {
                 length = bytes.length;
             }
             for (int head = pos; head < pos + length; head++) {
+                log.info("data length: {}, bytes length: {}", data.length, bytes.length);
                 data[head] = bytes[head - pos];
             }
             pos += sizeList.get(item);

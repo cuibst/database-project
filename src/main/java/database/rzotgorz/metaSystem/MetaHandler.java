@@ -47,7 +47,7 @@ public class MetaHandler {
     }
 
     public void addTable(TableInfo tableInfo) {
-        this.dbInfo.insertTable(dbName, tableInfo);
+        this.dbInfo.insertTable(tableInfo.getName(), tableInfo);
         this.dump();
     }
 

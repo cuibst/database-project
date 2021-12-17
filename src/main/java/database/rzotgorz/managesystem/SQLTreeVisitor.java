@@ -3,6 +3,7 @@ package database.rzotgorz.managesystem;
 import database.rzotgorz.exceptions.ParseError;
 import database.rzotgorz.managesystem.results.ListResult;
 import database.rzotgorz.managesystem.results.MessageResult;
+import database.rzotgorz.managesystem.results.QueryResult;
 import database.rzotgorz.managesystem.results.ResultItem;
 import database.rzotgorz.metaSystem.ColumnInfo;
 import database.rzotgorz.metaSystem.TableInfo;
@@ -226,5 +227,44 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
         for(TerminalNode node : ctx.Identifier())
             keys.add(node.getText());
         return new PrimaryKey(keys);
+    }
+
+    @Override
+    public Object visitInsert_into_table(SQLParser.Insert_into_tableContext ctx) {
+        String tableName = ctx.getChild(2).getText();
+        List<Object> valueLists = (List<Object>) ctx.value_lists().accept(this);
+        log.info("value list size: {}", valueLists.size());
+        for(Object valueList : valueLists)
+            controller.insertRecord(tableName, (List<Object>) valueList);
+        return new QueryResult("inserted", valueLists.size());
+    }
+
+    @Override
+    public Object visitValue_lists(SQLParser.Value_listsContext ctx) {
+        List<Object> result = new ArrayList<>();
+        for (SQLParser.Value_listContext list : ctx.value_list())
+            result.add(list.accept(this));
+        return result;
+    }
+
+    @Override
+    public Object visitValue_list(SQLParser.Value_listContext ctx) {
+        List<Object> result = new ArrayList<>();
+        for(SQLParser.ValueContext value : ctx.value())
+            result.add(value.accept(this));
+        log.info("value list size: {}", result.size());
+        return result;
+    }
+
+    @Override
+    public Object visitValue(SQLParser.ValueContext ctx) {
+        if(ctx.Integer() != null)
+            return Integer.parseInt(ctx.getText());
+        else if(ctx.Float() != null)
+            return Float.parseFloat(ctx.getText());
+        else if(ctx.String() != null)
+            return ctx.getText().substring(1, ctx.getText().length()-1);
+        else
+            return null;
     }
 }
