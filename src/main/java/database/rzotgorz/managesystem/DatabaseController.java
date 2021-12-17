@@ -207,6 +207,10 @@ public class DatabaseController {
 //            log.info("string list size: {}", stringList.size());
             byte[] data = pack.info.buildRecord(stringList);
             FileHandler fileHandler = recordManager.openFile(getTablePath(tableName));
+            for (int i = 0; i < data.length; i++) {
+                if (data[i] != (byte) 0)
+                    log.info(String.valueOf(data[i]));
+            }
             Record rid = fileHandler.insertRecord(data);
         } catch (Exception e) {
             e.printStackTrace();

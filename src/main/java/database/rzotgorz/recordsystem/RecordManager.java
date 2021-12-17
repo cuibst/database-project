@@ -138,4 +138,11 @@ public class RecordManager {
         fm.closeFile(handler.getFileId());
         handler.setOpened(false);
     }
+
+    public void shutdown() {
+        for (String name : openFiles.keySet()) {
+            this.closeFile(name);
+        }
+        fm.shutdown();
+    }
 }
