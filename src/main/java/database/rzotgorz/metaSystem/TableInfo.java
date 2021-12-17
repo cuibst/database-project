@@ -64,14 +64,18 @@ public class TableInfo implements Serializable {
     }
 
     public void updateParams() {
-        this.totalSize = this.sizeList.size();
         int __ = 0;
         for (Map.Entry<String, ColumnInfo> entry : columns.entrySet()) {
             this.colIndex.put(entry.getValue().getName(), __);
             __++;
             this.typeList.add(entry.getValue().getType());
             this.sizeList.add(entry.getValue().getSize());
+//            log.info(String.);
         }
+        this.totalSize = 0;
+        for (int i = 0; i < this.sizeList.size(); i++)
+            this.totalSize += this.sizeList.get(i);
+//        log.info(String.valueOf(this.totalSize));
     }
 
     public void insertColumn(ColumnInfo columnInfo) {

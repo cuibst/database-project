@@ -15,7 +15,10 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.FileAlreadyExistsException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Slf4j
 public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
@@ -44,7 +47,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     @Override
     public Object visitProgram(SQLParser.ProgramContext ctx) {
         List<ResultItem> results = new ArrayList<>();
-        for(SQLParser.StatementContext statementContext : ctx.statement()) {
+        for (SQLParser.StatementContext statementContext : ctx.statement()) {
             try {
                 ResultItem result = (ResultItem) statementContext.accept(this);
                 long cost = getTimeDelta();
@@ -145,7 +148,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
         ColumnBundle bundle = (ColumnBundle) ctx.field_list().accept(this);
         String tableName = ctx.Identifier().getText();
         ResultItem result = controller.createTable(new TableInfo(tableName, bundle.columnInfos));
-        if(((MessageResult)result).isError())
+        if (((MessageResult) result).isError())
             return result;
         try {
             for (Map.Entry<String, ForeignKey> entry : bundle.foreignKeys.entrySet()) {
@@ -154,7 +157,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
         } catch (IOException e) {
             return new MessageResult(e.getMessage(), true);
         }
-        if(bundle.primaryKey != null)
+        if (bundle.primaryKey != null)
             controller.setPrimaryKey(tableName, bundle.primaryKey.fields);
         return new MessageResult("ok");
     }
@@ -182,11 +185,11 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
                 foreignKeyMap.put(keys[0], new ForeignKey(keys[1], keys[2]));
             } else if (field.getClass() == SQLParser.Primary_key_fieldContext.class) {
                 PrimaryKey key = (PrimaryKey) field.accept(this);
-                for(String name : key.fields) {
-                    if(!columns.containsKey(name))
+                for (String name : key.fields) {
+                    if (!columns.containsKey(name))
                         throw new ParseError("Unknown field " + name);
                 }
-                if(primaryKey != null)
+                if (primaryKey != null)
                     throw new ParseError("Only one primary key field is supported");
                 primaryKey = key;
             } else {
@@ -211,7 +214,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     public Object visitForeign_key_field(SQLParser.Foreign_key_fieldContext ctx) {
         String[] keys = new String[3];
         int cnt = 0;
-        for(TerminalNode node : ctx.Identifier())
+        for (TerminalNode node : ctx.Identifier())
             keys[cnt++] = node.getText();
         return keys;
     }
@@ -224,7 +227,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     @Override
     public Object visitIdentifiers(SQLParser.IdentifiersContext ctx) {
         List<String> keys = new ArrayList<>();
-        for(TerminalNode node : ctx.Identifier())
+        for (TerminalNode node : ctx.Identifier())
             keys.add(node.getText());
         return new PrimaryKey(keys);
     }
@@ -233,8 +236,8 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     public Object visitInsert_into_table(SQLParser.Insert_into_tableContext ctx) {
         String tableName = ctx.getChild(2).getText();
         List<Object> valueLists = (List<Object>) ctx.value_lists().accept(this);
-        log.info("value list size: {}", valueLists.size());
-        for(Object valueList : valueLists)
+//        log.info("value list size: {}", valueLists.size());
+        for (Object valueList : valueLists)
             controller.insertRecord(tableName, (List<Object>) valueList);
         return new QueryResult("inserted", valueLists.size());
     }
@@ -250,20 +253,20 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     @Override
     public Object visitValue_list(SQLParser.Value_listContext ctx) {
         List<Object> result = new ArrayList<>();
-        for(SQLParser.ValueContext value : ctx.value())
+        for (SQLParser.ValueContext value : ctx.value())
             result.add(value.accept(this));
-        log.info("value list size: {}", result.size());
+//        log.info("value list size: {}", result.size());
         return result;
     }
 
     @Override
     public Object visitValue(SQLParser.ValueContext ctx) {
-        if(ctx.Integer() != null)
+        if (ctx.Integer() != null)
             return Integer.parseInt(ctx.getText());
-        else if(ctx.Float() != null)
+        else if (ctx.Float() != null)
             return Float.parseFloat(ctx.getText());
-        else if(ctx.String() != null)
-            return ctx.getText().substring(1, ctx.getText().length()-1);
+        else if (ctx.String() != null)
+            return ctx.getText().substring(1, ctx.getText().length() - 1);
         else
             return null;
     }

@@ -115,7 +115,7 @@ public class Parser {
         for (int item = 0; item < sizeList.size(); item++) {
             int length;
             byte[] bytes;
-            if (typeList.get(item) == "VARCHAR") {
+            if (typeList.get(item).equals("VARCHAR")) {
                 if (valueList.get(item) == null || valueList.get(item).equals("null")) {
                     length = 1;
                     bytes = new byte[1];
@@ -138,7 +138,7 @@ public class Parser {
                 length = bytes.length;
             }
             for (int head = pos; head < pos + length; head++) {
-                log.info("data length: {}, bytes length: {}", data.length, bytes.length);
+//                log.info("data length: {}, bytes length: {}", data.length, bytes.length);
                 data[head] = bytes[head - pos];
             }
             pos += sizeList.get(item);

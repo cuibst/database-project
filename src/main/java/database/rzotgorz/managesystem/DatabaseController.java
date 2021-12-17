@@ -1,6 +1,5 @@
 package database.rzotgorz.managesystem;
 
-import com.sun.jdi.IntegerType;
 import database.rzotgorz.indexsystem.FileIndex;
 import database.rzotgorz.indexsystem.IndexManager;
 import database.rzotgorz.managesystem.results.DatabaseChangeResult;
@@ -13,7 +12,6 @@ import database.rzotgorz.metaSystem.TableInfo;
 import database.rzotgorz.parser.SQLLexer;
 import database.rzotgorz.parser.SQLParser;
 import database.rzotgorz.recordsystem.FileHandler;
-import database.rzotgorz.recordsystem.RID;
 import database.rzotgorz.recordsystem.Record;
 import database.rzotgorz.recordsystem.RecordManager;
 import database.rzotgorz.utils.FileScanner;
@@ -26,7 +24,6 @@ import org.antlr.v4.runtime.misc.ParseCancellationException;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.NotDirectoryException;
 import java.util.*;
@@ -180,20 +177,20 @@ public class DatabaseController {
 
     public void createIndex(String indexName, String tableName, String columnName) throws Exception {
         InfoAndHandler pack = getTableInfo(tableName);
-        if(pack.handler.existsIndex(indexName))
+        if (pack.handler.existsIndex(indexName))
             throw new RuntimeException(String.format("Indices %s already exists!", indexName));
-        if(pack.info.existsIndex(columnName)) {
+        if (pack.info.existsIndex(columnName)) {
             pack.handler.createIndex(indexName, tableName, columnName);
             return;
         }
         FileIndex index = indexManager.createIndex(currentUsingDatabase, tableName);
         pack.info.createIndex(columnName, index.getRootId());
         Integer columnId = pack.info.getIndex(columnName);
-        if(columnId == null)
+        if (columnId == null)
             throw new RuntimeException(String.format("Column %s not exists", columnName));
         FileHandler fileHandler = recordManager.openFile(getTablePath(tableName));
         FileScanner fileScanner = new FileScanner(fileHandler);
-        for(Record record : fileScanner) {
+        for (Record record : fileScanner) {
             Map<Integer, String> data = pack.info.loadRecord(record);
             String key = data.get(columnId);
             long keyId = Long.parseLong(key);
@@ -207,7 +204,7 @@ public class DatabaseController {
             InfoAndHandler pack = getTableInfo(tableName);
             List<String> stringList = new ArrayList<>();
             valueList.forEach(obj -> stringList.add(obj.toString()));
-            log.info("string list size: {}", stringList.size());
+//            log.info("string list size: {}", stringList.size());
             byte[] data = pack.info.buildRecord(stringList);
             FileHandler fileHandler = recordManager.openFile(getTablePath(tableName));
             Record rid = fileHandler.insertRecord(data);

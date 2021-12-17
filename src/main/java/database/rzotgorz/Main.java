@@ -73,11 +73,10 @@ public class Main {
 //        printResults(e);
 //        e = controller.execute("SHOW TABLES;");
 //        printResults(e);
-//        e = controller.execute("DROP DATABASE test;");
-//        printResults(e);
+        e = controller.execute("DROP DATABASE test;");
+        printResults(e);
 //        e = controller.execute("SHOW DATABASES;");
 //        printResults(e);
-
 
 
 //        ArrayList<String> list = new ArrayList<>();

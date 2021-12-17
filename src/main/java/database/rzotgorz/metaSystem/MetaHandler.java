@@ -1,12 +1,16 @@
 package database.rzotgorz.metaSystem;
 
 import com.alibaba.fastjson.JSONObject;
+import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+@Data
+@Slf4j
 public class MetaHandler {
     private DbInfo dbInfo;
     private String dbName;
@@ -81,6 +85,7 @@ public class MetaHandler {
     public TableInfo getTable(String tbName) {
         if (!this.dbInfo.getTbMap().containsKey(tbName))
             throw new RuntimeException(String.format("Can not find table named: %s", tbName));
+//        log.info(String.valueOf(this.dbInfo.getTbMap().get(tbName).getTotalSize()));
         return this.dbInfo.getTbMap().get(tbName);
     }
 
