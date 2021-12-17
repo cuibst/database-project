@@ -217,6 +217,11 @@ public class DatabaseController {
         }
     }
 
+    public void shutdown() {
+        metaManager.shutdown();
+        indexManager.shutdown();
+        recordManager.shutdown();
+    }
 
     public static class ErrorListener implements ANTLRErrorListener {
         @Override

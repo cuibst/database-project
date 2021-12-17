@@ -78,6 +78,7 @@ public class Main {
 //        e = controller.execute("SHOW DATABASES;");
 //        printResults(e);
 
+        controller.shutdown();
 
 //        ArrayList<String> list = new ArrayList<>();
 //        list.add("1");
