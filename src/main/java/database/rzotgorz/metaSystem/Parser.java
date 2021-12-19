@@ -145,7 +145,7 @@ public class Parser {
         return data;
     }
 
-    public static String antiParser(byte[] data, String type) throws UnsupportedEncodingException {
+    public static Object antiParser(byte[] data, String type) throws UnsupportedEncodingException {
 
         switch (type) {
             case "VARCHAR": {
@@ -163,21 +163,21 @@ public class Parser {
                 for (int i = 0; i < process.length; i++) {
                     process[i] = data[i + 1];
                 }
-                return (data[0] == (byte) 0) ? null : (((Integer) ByteIntegerConverter.bytesToInt(process)).toString());
+                return (data[0] == (byte) 0) ? null : (((Integer) ByteIntegerConverter.bytesToInt(process)));
             }
             case "FLOAT": {
                 byte[] process = new byte[4];
                 for (int i = 0; i < process.length; i++) {
                     process[i] = data[i + 1];
                 }
-                return (data[0] == (byte) 0) ? null : (((Float) ByteFloatConverter.byte2float(process)).toString());
+                return (data[0] == (byte) 0) ? null : (((Float) ByteFloatConverter.byte2float(process)));
             }
             case "Date": {
                 byte[] process = new byte[8];
                 for (int i = 0; i < process.length; i++) {
                     process[i] = data[i + 1];
                 }
-                return (data[0] == (byte) 0) ? null : (((Long) ByteLongConverter.bytes2Long(process)).toString());
+                return (data[0] == (byte) 0) ? null : (((Long) ByteLongConverter.bytes2Long(process)));
             }
             default: {
                 throw new RuntimeException(String.format("Invalid Type : %s", type));
