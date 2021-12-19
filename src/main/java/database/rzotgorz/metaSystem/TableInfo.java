@@ -134,9 +134,8 @@ public class TableInfo implements Serializable {
 
     public ArrayList<String> getHeader() {
         ArrayList<String> list = new ArrayList<>();
-        list.add(this.name);
         for (Map.Entry<String, ColumnInfo> entry : this.columns.entrySet()) {
-            list.add(entry.getValue().getName());
+            list.add(this.name + "." + entry.getValue().getName());
         }
         return list;
     }

@@ -430,6 +430,7 @@ public class DatabaseController {
             log.info(result.toString());
             valuesList.add(result);
         });
+        log.info(pack.info.getHeader().toString());
         return new TableResult(pack.info.getHeader(), valuesList);
     }
 

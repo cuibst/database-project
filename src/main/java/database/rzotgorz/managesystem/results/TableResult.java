@@ -1,9 +1,11 @@
 package database.rzotgorz.managesystem.results;
 
 import database.rzotgorz.utils.PrettyTable;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 
+@Slf4j
 public class TableResult extends ResultItem {
 
     private final List<String> headers;
@@ -11,6 +13,7 @@ public class TableResult extends ResultItem {
     private final PrettyTable prettyTable;
 
     public TableResult(List<String> header, Iterable<List<String>> data) {
+        log.info(header.toString());
         prettyTable = new PrettyTable(header);
         data.forEach(prettyTable::addRow);
         this.headers = header;
