@@ -1,14 +1,13 @@
 package database.rzotgorz.managesystem;
 
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
 import database.rzotgorz.indexsystem.FileIndex;
 import database.rzotgorz.indexsystem.IndexManager;
-import database.rzotgorz.managesystem.results.DatabaseChangeResult;
-import database.rzotgorz.managesystem.results.ListResult;
-import database.rzotgorz.managesystem.results.MessageResult;
-import database.rzotgorz.managesystem.results.ResultItem;
-import database.rzotgorz.metaSystem.MetaHandler;
-import database.rzotgorz.metaSystem.MetaManager;
-import database.rzotgorz.metaSystem.TableInfo;
+import database.rzotgorz.managesystem.clauses.OperatorClause;
+import database.rzotgorz.managesystem.clauses.WhereClause;
+import database.rzotgorz.managesystem.results.*;
+import database.rzotgorz.metaSystem.*;
 import database.rzotgorz.parser.SQLLexer;
 import database.rzotgorz.parser.SQLParser;
 import database.rzotgorz.recordsystem.FileHandler;
@@ -17,10 +16,12 @@ import database.rzotgorz.recordsystem.RecordManager;
 import database.rzotgorz.utils.FileScanner;
 import lombok.extern.slf4j.Slf4j;
 import org.antlr.v4.runtime.*;
+import org.antlr.v4.runtime.Parser;
 import org.antlr.v4.runtime.atn.ATNConfigSet;
 import org.antlr.v4.runtime.dfa.DFA;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
 
+import javax.xml.transform.Result;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -145,19 +146,6 @@ public class DatabaseController {
         return new MessageResult("ok");
     }
 
-    public void addForeignKey(String tableName, SQLTreeVisitor.ForeignKey foreignKey, String keyName) throws IOException {
-        MetaHandler handler = metaManager.openMeta(currentUsingDatabase);
-        handler.addForeign(foreignKey.targetTable, foreignKey.name, keyName);
-        String indexName = keyName == null ? (foreignKey.targetTable + "." + foreignKey.name) : keyName;
-        if (!handler.existsIndex(indexName))
-            handler.createIndex(indexName, foreignKey.targetTable, foreignKey.name);
-    }
-
-    public void setPrimaryKey(String tableName, List<String> primaryKeyFields) {
-        MetaHandler handler = metaManager.openMeta(tableName);
-        handler.setPrimary(tableName, primaryKeyFields);
-    }
-
     private static class InfoAndHandler {
         public TableInfo info;
         public MetaHandler handler;
@@ -173,6 +161,73 @@ public class DatabaseController {
             throw new RuntimeException("No using database!");
         MetaHandler handler = metaManager.openMeta(currentUsingDatabase);
         return new InfoAndHandler(handler.getTable(tableName), handler);
+    }
+
+    public ResultItem describeTable(String tableName) {
+        InfoAndHandler pack = getTableInfo(tableName);
+        List<String> header = Arrays.asList("Field", "Type", "Null", "Key", "Default", "Extra");
+        Map<String, String[]> data = pack.info.describe();
+        List<List<String>> columns = new ArrayList<>();
+        data.values().forEach(val -> columns.add(Arrays.asList(val)));
+        return new TableResult(header, columns);
+    }
+
+    public void addUniqueConstraint(String tableName, String columnName, String constraintName) throws Exception {
+        InfoAndHandler pack = getTableInfo(tableName);
+        pack.handler.addUnique(pack.info, columnName, constraintName);
+        if(!pack.info.existsIndex(constraintName))
+            createIndex(constraintName, tableName, columnName);
+    }
+
+    public void addForeignKeyConstraint(String tableName, String columnName, SQLTreeVisitor.ForeignKey foreignKey, String constraintName) throws Exception {
+        if(currentUsingDatabase == null)
+            throw new RuntimeException("No database is being used!");
+        MetaHandler metaHandler = metaManager.openMeta(currentUsingDatabase);
+        metaHandler.addForeign(tableName, columnName, foreignKey);
+        if(constraintName == null && !metaHandler.existsIndex(foreignKey.targetTable + '.' + foreignKey.name))
+            createIndex(foreignKey.targetTable + '.' + foreignKey.name, foreignKey.targetTable, foreignKey.name);
+        else if(!metaHandler.existsIndex(constraintName))
+            createIndex(constraintName, foreignKey.targetTable, foreignKey.name);
+    }
+
+    public void setPrimary(String tableName, SQLTreeVisitor.PrimaryKey primaryKey) throws Exception {
+        if(currentUsingDatabase == null)
+            throw new RuntimeException("No database is being used!");
+        MetaHandler metaHandler = metaManager.openMeta(currentUsingDatabase);
+        metaHandler.setPrimary(tableName, primaryKey == null ? null : primaryKey.fields);
+        if(primaryKey == null)
+            return;
+        for (String column : primaryKey.fields) {
+            if (!metaHandler.existsIndex(tableName + "." + column))
+                createIndex(tableName + "." + column, tableName, column);
+        }
+    }
+
+    public void removePrimary(String tableName) {
+        if(currentUsingDatabase == null)
+            throw new RuntimeException("No database is being used!");
+        MetaHandler metaHandler = metaManager.openMeta(currentUsingDatabase);
+        List<String> key = metaHandler.getTable(tableName).getPrimary();
+        key.forEach(column -> {
+            if(metaHandler.existsIndex(tableName + "." + column))
+                removeIndex(tableName + "." + column);
+        });
+    }
+
+    public void addColumn(String tableName, ColumnInfo columnInfo) {
+
+    }
+
+    public void removeForeignKeyConstraint(String tableName, String column, String constraintName) {
+        if(currentUsingDatabase == null)
+            throw new RuntimeException("No database is being used!");
+        if(constraintName == null) {
+            MetaHandler metaHandler = metaManager.openMeta(currentUsingDatabase);
+            metaHandler.removeForeign(tableName, column);
+            SQLTreeVisitor.ForeignKey key = metaHandler.getTable(tableName).getForeign().get(column);
+            removeIndex(key.targetTable + "." + key.name);
+        } else
+            removeIndex(constraintName);
     }
 
     public void createIndex(String indexName, String tableName, String columnName) throws Exception {
@@ -199,6 +254,41 @@ public class DatabaseController {
         pack.handler.createIndex(indexName, tableName, columnName);
     }
 
+    public void removeIndex(String indexName) {
+        if(currentUsingDatabase == null)
+            throw new RuntimeException("No database is being used!");
+        MetaHandler metaHandler = metaManager.openMeta(currentUsingDatabase);
+        DbInfo.IndexInfo indexInfo = metaHandler.getIndexInfo(indexName);
+        TableInfo tableInfo = metaHandler.getTable(indexInfo.tableName);
+        if(!metaHandler.existsIndex(indexName))
+            throw new RuntimeException(String.format("Index %s doesn't exist!", indexName));
+        tableInfo.removeIndex(indexName);
+        metaHandler.removeIndex(indexName);
+        metaManager.closeMeta(currentUsingDatabase);
+    }
+
+    private interface Function {
+
+    }
+
+    public void buildFunctions(String tableName, List<WhereClause> clauses, MetaHandler metaHandler) {
+        TableInfo tableInfo = metaHandler.getTable(tableName);
+        for (WhereClause clause : clauses) {
+            if(clause.getTableName() != null && !clause.getTableName().equals(tableName))
+                continue;
+            Integer index = tableInfo.getIndex(clause.getColumnName());
+            if(index == null)
+                throw new RuntimeException(String.format("Field %s for table %s is unknown.", clause.getColumnName(), clause.getTableName()));
+            String type = tableInfo.getTypeList().get(index);
+            if(clause.getClass() == OperatorClause.class) {
+                if(clause.getTargetColumn() != null) {
+                    if(!tableName.equals(clause.getTableName()))
+                        continue;
+                }
+            }
+        }
+    }
+
     public void insertRecord(String tableName, List<Object> valueList) {
         try {
             InfoAndHandler pack = getTableInfo(tableName);
@@ -207,15 +297,58 @@ public class DatabaseController {
 //            log.info("string list size: {}", stringList.size());
             byte[] data = pack.info.buildRecord(stringList);
             FileHandler fileHandler = recordManager.openFile(getTablePath(tableName));
-            for (int i = 0; i < data.length; i++) {
-                if (data[i] != (byte) 0)
-                    log.info(String.valueOf(data[i]));
-            }
             Record rid = fileHandler.insertRecord(data);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
+
+//    public ResultItem selectRecord(List<Selector> selectors, List<String> tableNames, List<WhereClause> clauses) { //FIXME: NO GROUP BY support
+//        if(currentUsingDatabase == null)
+//            throw new RuntimeException("No database is being used!");
+//        MetaHandler metaHandler = metaManager.openMeta(currentUsingDatabase);
+//        JSONObject columnToTable = metaHandler.buildTable(tableNames);
+//        clauses.forEach(clause -> {
+//            String table = clause.getTableName();
+//            String column = clause.getColumnName();
+//            if(table == null) {
+//                JSONArray tables = columnToTable.getJSONArray(column);
+//                if(tables.size() > 1)
+//                    throw new RuntimeException(String.format("Column %s is ambiguous.", column));
+//                if(tables.size() == 0)
+//                    throw new RuntimeException(String.format("Unknown column %s.", column));
+//                clause.setTableName(tables.getString(0));
+//            }
+//            table = clause.getTargetTable();
+//            column = clause.getTargetColumn();
+//            if(column != null && table == null) {
+//                JSONArray tables = columnToTable.getJSONArray(column);
+//                if(tables.size() > 1)
+//                    throw new RuntimeException(String.format("Column %s is ambiguous.", column));
+//                if(tables.size() == 0)
+//                    throw new RuntimeException(String.format("Unknown column %s.", column));
+//                clause.setTargetTable(tables.getString(0));
+//            }
+//        });
+//        selectors.forEach(selector -> {
+//            String table = selector.getTableName();
+//            String column = selector.getColumnName();
+//            if(table == null) {
+//                JSONArray tables = columnToTable.getJSONArray(column);
+//                if(tables.size() > 1)
+//                    throw new RuntimeException(String.format("Column %s is ambiguous.", column));
+//                if(tables.size() == 0)
+//                    throw new RuntimeException(String.format("Unknown column %s.", column));
+//                selector.setTableName(tables.getString(0));
+//            }
+//        });
+//        Set<Selector.SelectorType> types = new HashSet<>();
+//        selectors.forEach(selector -> types.add(selector.getType()));
+//        if(types.size() > 1 && types.contains(Selector.SelectorType.FIELD))
+//            throw new RuntimeException("No group specified, can't resolve both aggregation and field");
+//
+//    }
+
 
     public void shutdown() {
         metaManager.shutdown();

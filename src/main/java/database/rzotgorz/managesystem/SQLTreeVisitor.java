@@ -1,9 +1,10 @@
 package database.rzotgorz.managesystem;
 
 import database.rzotgorz.exceptions.ParseError;
+import database.rzotgorz.managesystem.clauses.*;
 import database.rzotgorz.managesystem.results.ListResult;
 import database.rzotgorz.managesystem.results.MessageResult;
-import database.rzotgorz.managesystem.results.QueryResult;
+import database.rzotgorz.managesystem.results.OperationResult;
 import database.rzotgorz.managesystem.results.ResultItem;
 import database.rzotgorz.metaSystem.ColumnInfo;
 import database.rzotgorz.metaSystem.TableInfo;
@@ -45,7 +46,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     }
 
     @Override
-    public Object visitProgram(SQLParser.ProgramContext ctx) {
+    public List<ResultItem> visitProgram(SQLParser.ProgramContext ctx) {
         List<ResultItem> results = new ArrayList<>();
         for (SQLParser.StatementContext statementContext : ctx.statement()) {
             try {
@@ -56,6 +57,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
                     results.add(result);
                 }
             } catch (Exception e) {
+                e.printStackTrace();
                 ResultItem errorResult = new MessageResult(e.getMessage(), true);
                 errorResult.cost = getTimeDelta();
                 results.add(errorResult);
@@ -66,7 +68,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     }
 
     @Override
-    public Object visitCreate_db(SQLParser.Create_dbContext ctx) {
+    public MessageResult visitCreate_db(SQLParser.Create_dbContext ctx) {
         try {
             controller.createDatabase(ctx.Identifier().getText());
             return new MessageResult("ok");
@@ -76,7 +78,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     }
 
     @Override
-    public Object visitDrop_db(SQLParser.Drop_dbContext ctx) {
+    public ResultItem visitDrop_db(SQLParser.Drop_dbContext ctx) {
         try {
             return controller.dropDatabase(ctx.Identifier().getText());
         } catch (FileNotFoundException e) {
@@ -85,7 +87,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     }
 
     @Override
-    public Object visitUse_db(SQLParser.Use_dbContext ctx) {
+    public ResultItem visitUse_db(SQLParser.Use_dbContext ctx) {
         try {
             return controller.useDatabase(ctx.Identifier().getText());
         } catch (FileNotFoundException e) {
@@ -94,12 +96,12 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     }
 
     @Override
-    public Object visitShow_dbs(SQLParser.Show_dbsContext ctx) {
+    public ListResult visitShow_dbs(SQLParser.Show_dbsContext ctx) {
         return new ListResult(controller.getDatabases(), "DATABASES");
     }
 
     @Override
-    public Object visitShow_tables(SQLParser.Show_tablesContext ctx) {
+    public ResultItem visitShow_tables(SQLParser.Show_tablesContext ctx) {
         return controller.showTables();
     }
 
@@ -123,7 +125,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
         }
     }
 
-    private static class PrimaryKey {
+    public static class PrimaryKey {
         public List<String> fields;
 
         public PrimaryKey(List<String> fields) {
@@ -144,7 +146,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     }
 
     @Override
-    public Object visitCreate_table(SQLParser.Create_tableContext ctx) {
+    public ResultItem visitCreate_table(SQLParser.Create_tableContext ctx) {
         ColumnBundle bundle = (ColumnBundle) ctx.field_list().accept(this);
         String tableName = ctx.Identifier().getText();
         ResultItem result = controller.createTable(new TableInfo(tableName, bundle.columnInfos));
@@ -152,24 +154,24 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
             return result;
         try {
             for (Map.Entry<String, ForeignKey> entry : bundle.foreignKeys.entrySet()) {
-                controller.addForeignKey(tableName, entry.getValue(), entry.getKey());
+                controller.addForeignKeyConstraint(tableName, entry.getKey(), entry.getValue(), null);
             }
-        } catch (IOException e) {
+            if (bundle.primaryKey != null)
+                controller.setPrimary(tableName, bundle.primaryKey);
+        } catch (Exception e) {
             return new MessageResult(e.getMessage(), true);
         }
-        if (bundle.primaryKey != null)
-            controller.setPrimaryKey(tableName, bundle.primaryKey.fields);
         return new MessageResult("ok");
     }
 
     @Override
-    public Object visitDrop_table(SQLParser.Drop_tableContext ctx) {
+    public ResultItem visitDrop_table(SQLParser.Drop_tableContext ctx) {
         String tableName = ctx.Identifier().getText();
         return controller.dropTable(tableName);
     }
 
     @Override
-    public Object visitField_list(SQLParser.Field_listContext ctx) {
+    public ColumnBundle visitField_list(SQLParser.Field_listContext ctx) {
         Map<String, ColumnInfo> columns = new HashMap<>();
         Map<String, ForeignKey> foreignKeyMap = new HashMap<>();
         PrimaryKey primaryKey = null;
@@ -200,7 +202,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     }
 
     @Override
-    public Object visitNormal_field(SQLParser.Normal_fieldContext ctx) {
+    public ColumnInfo visitNormal_field(SQLParser.Normal_fieldContext ctx) {
         ValueType type = (ValueType) ctx.type_().accept(this);
         return new ColumnInfo(type.type, ctx.Identifier().getText(), type.size, null);
     }
@@ -211,7 +213,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     }
 
     @Override
-    public Object visitForeign_key_field(SQLParser.Foreign_key_fieldContext ctx) {
+    public String[] visitForeign_key_field(SQLParser.Foreign_key_fieldContext ctx) {
         String[] keys = new String[3];
         int cnt = 0;
         for (TerminalNode node : ctx.Identifier())
@@ -220,12 +222,17 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     }
 
     @Override
-    public Object visitType_(SQLParser.Type_Context ctx) {
+    public ValueType visitType_(SQLParser.Type_Context ctx) {
         return new ValueType(ctx.getChild(0).getText(), ctx.Integer() == null ? 0 : Integer.parseInt(ctx.Integer().toString()));
     }
 
     @Override
-    public Object visitIdentifiers(SQLParser.IdentifiersContext ctx) {
+    public Object visitDescribe_table(SQLParser.Describe_tableContext ctx) {
+        return controller.describeTable(ctx.Identifier().getText());
+    }
+
+    @Override
+    public PrimaryKey visitIdentifiers(SQLParser.IdentifiersContext ctx) {
         List<String> keys = new ArrayList<>();
         for (TerminalNode node : ctx.Identifier())
             keys.add(node.getText());
@@ -233,17 +240,17 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     }
 
     @Override
-    public Object visitInsert_into_table(SQLParser.Insert_into_tableContext ctx) {
+    public ResultItem visitInsert_into_table(SQLParser.Insert_into_tableContext ctx) {
         String tableName = ctx.getChild(2).getText();
         List<Object> valueLists = (List<Object>) ctx.value_lists().accept(this);
 //        log.info("value list size: {}", valueLists.size());
         for (Object valueList : valueLists)
             controller.insertRecord(tableName, (List<Object>) valueList);
-        return new QueryResult("inserted", valueLists.size());
+        return new OperationResult("inserted", valueLists.size());
     }
 
     @Override
-    public Object visitValue_lists(SQLParser.Value_listsContext ctx) {
+    public List<Object> visitValue_lists(SQLParser.Value_listsContext ctx) {
         List<Object> result = new ArrayList<>();
         for (SQLParser.Value_listContext list : ctx.value_list())
             result.add(list.accept(this));
@@ -251,7 +258,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     }
 
     @Override
-    public Object visitValue_list(SQLParser.Value_listContext ctx) {
+    public List<Object> visitValue_list(SQLParser.Value_listContext ctx) {
         List<Object> result = new ArrayList<>();
         for (SQLParser.ValueContext value : ctx.value())
             result.add(value.accept(this));
@@ -269,5 +276,97 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
             return ctx.getText().substring(1, ctx.getText().length() - 1);
         else
             return null;
+    }
+
+    @Override
+    public Object visitSelectors(SQLParser.SelectorsContext ctx) {
+        if(ctx.getChild(0).getText().equals("*"))
+            return new Selector(Selector.SelectorType.ALL, "*", "*", Selector.AggregatorType.MAX);
+        List<Selector> selectors = new ArrayList<>();
+        ctx.selector().forEach(selectorContext -> selectors.add((Selector) selectorContext.accept(this)));
+        return selectors;
+    }
+
+    @Override
+    public Selector visitSelector(SQLParser.SelectorContext ctx) {
+        if(ctx.Count() != null)
+            return new Selector(Selector.SelectorType.COUNTER, "*", "*", Selector.AggregatorType.MAX);
+        Column column = (Column) ctx.column().accept(this);
+        if(ctx.aggregator() != null)
+            return new Selector(Selector.SelectorType.AGGREGATION, column.tableName, column.columnName, Selector.AggregatorType.valueOf(ctx.getText()));
+        return new Selector(Selector.SelectorType.FIELD, column.tableName, column.columnName, Selector.AggregatorType.MAX);
+    }
+
+    @Override
+    public List<WhereClause> visitWhere_and_clause(SQLParser.Where_and_clauseContext ctx) {
+        List<WhereClause> result = new ArrayList<>();
+        ctx.where_clause().forEach(where_clauseContext -> result.add((WhereClause) where_clauseContext.accept(this)));
+        return result;
+    }
+
+    @Override
+    public WhereClause visitWhere_operator_expression(SQLParser.Where_operator_expressionContext ctx) {
+        Column column = (Column) ctx.column().accept(this);
+        String op = ctx.operator().getText();
+        Object value = ctx.expression().accept(this);
+        if(value.getClass() == Column.class)
+            return new ColumnOperatorClause(column.tableName, column.columnName, op, ((Column)value).tableName, ((Column)value).columnName);
+        else
+            return new ValueOperatorClause(column.tableName, column.columnName, op, value);
+    }
+
+    @Override
+    public ValueOperatorClause visitWhere_operator_select(SQLParser.Where_operator_selectContext ctx) {
+        Column column = (Column) ctx.column().accept(this);
+        String op = ctx.operator().getText();
+        ResultItem resultItem = (ResultItem) ctx.select_table().accept(this);
+        //FIXME: Convert the result item to value
+        return new ValueOperatorClause(column.tableName, column.columnName, op, resultItem);
+    }
+
+    @Override
+    public NullClause visitWhere_null(SQLParser.Where_nullContext ctx) {
+        Column column = (Column) ctx.column().accept(this);
+        boolean isNull = !ctx.getChild(2).getText().equals("NOT");
+        return new NullClause(column.tableName, column.columnName, isNull);
+    }
+
+    @Override
+    public WhereInClause visitWhere_in_list(SQLParser.Where_in_listContext ctx) {
+        Column column = (Column) ctx.column().accept(this);
+        List<Object> list = (List<Object>) ctx.value_list().accept(this);
+        return new WhereInClause(column.tableName, column.columnName, list);
+    }
+
+    @Override
+    public WhereInClause visitWhere_in_select(SQLParser.Where_in_selectContext ctx) {
+        Column column = (Column) ctx.column().accept(this);
+        ResultItem resultItem = (ResultItem) ctx.select_table().accept(this);
+        //FIXME: Convert the result item to value list
+        return new WhereInClause(column.tableName, column.columnName, new ArrayList<>());
+    }
+
+    @Override
+    public LikeClause visitWhere_like_string(SQLParser.Where_like_stringContext ctx) {
+        Column column = (Column) ctx.column().accept(this);
+        String pattern = ctx.String().getText().substring(1, ctx.String().getText().length()-1);
+        return new LikeClause(column.tableName, column.columnName, pattern);
+    }
+
+    public static class Column {
+        public String tableName;
+        public String columnName;
+
+        public Column(String tableName, String columnName) {
+            this.tableName = tableName;
+            this.columnName = columnName;
+        }
+    }
+
+    @Override
+    public Object visitColumn(SQLParser.ColumnContext ctx) {
+        if(ctx.Identifier().size() == 1)
+            return new Column(null, ctx.Identifier(0).getText());
+        return new Column(ctx.Identifier(0).getText(), ctx.Identifier(1).getText());
     }
 }

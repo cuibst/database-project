@@ -1,5 +1,6 @@
 package database.rzotgorz.metaSystem;
 
+import database.rzotgorz.managesystem.SQLTreeVisitor;
 import database.rzotgorz.recordsystem.Record;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -17,7 +18,7 @@ public class TableInfo implements Serializable {
     private String name;
     private Map<String, ColumnInfo> columns;
     private List<String> primary;
-    private Map<String, String> foreign;
+    private Map<String, SQLTreeVisitor.ForeignKey> foreign;
     private List<String> index;
     private HashMap<String, String> unique;
     private List<Integer> sizeList;
@@ -39,7 +40,7 @@ public class TableInfo implements Serializable {
         this.updateParams();
     }
 
-    public void describe() {
+    public Map<String, String[]> describe() {
         Map<String, String[]> objects = new HashMap<>();
         for (Map.Entry<String, ColumnInfo> entry : columns.entrySet()) {
             objects.put(entry.getKey(), entry.getValue().getDescription());
@@ -61,6 +62,7 @@ public class TableInfo implements Serializable {
                 objects.get(foreign.get(entry.getKey()))[3] = "";
             }
         }
+        return objects;
     }
 
     public void updateParams() {
@@ -93,13 +95,12 @@ public class TableInfo implements Serializable {
         this.updateParams();
     }
 
-    public void addForeign(String col, String foreign) {
+    public void addForeign(String col, SQLTreeVisitor.ForeignKey foreign) {
         this.foreign.put(col, foreign);
     }
 
     public void removeForeign(String col) {
-        if (this.foreign.containsKey(col))
-            this.foreign.remove(col);
+        this.foreign.remove(col);
     }
 
     public void addUnique(String col, String unique) {
@@ -110,7 +111,7 @@ public class TableInfo implements Serializable {
         return Parser.encode(this.sizeList, this.typeList, this.totalSize, list);
     }
 
-    public void setPrimary(List array) {
+    public void setPrimary(List<String> array) {
         this.primary = array;
     }
 

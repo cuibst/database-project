@@ -14,7 +14,17 @@ import java.util.Map;
 public class DbInfo implements Serializable {
     private String name;
     private Map<String, TableInfo> tbMap;
-    private Map<String, JSONObject> index;
+    private Map<String, IndexInfo> index;
+
+    public static class IndexInfo {
+        public final String tableName;
+        public final String columnName;
+
+        public IndexInfo(String tableName, String columnName) {
+            this.tableName = tableName;
+            this.columnName = columnName;
+        }
+    }
 
     public DbInfo(String name, ArrayList<TableInfo> tableInfos) {
         this.name = name;
@@ -55,10 +65,7 @@ public class DbInfo implements Serializable {
     public void createIndex(String indexName, String tbName, String colName) {
         if (this.index.containsKey(indexName))
             throw new RuntimeException(String.format("Index named :%s already exists", indexName));
-        JSONObject object = new JSONObject();
-        object.put("tb", tbName);
-        object.put("col", colName);
-        this.index.put(indexName, object);
+        this.index.put(indexName, new IndexInfo(tbName, colName));
     }
 
     public void removeIndex(String name) {
@@ -67,7 +74,7 @@ public class DbInfo implements Serializable {
         this.index.remove(name);
     }
 
-    public JSONObject getIndexInfo(String name) {
+    public IndexInfo getIndexInfo(String name) {
         if (!this.index.containsKey(name))
             throw new RuntimeException(String.format("Can not find index named :%s", name));
         return this.index.get(name);

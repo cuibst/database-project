@@ -1,6 +1,7 @@
 package database.rzotgorz.metaSystem;
 
 import com.alibaba.fastjson.JSONObject;
+import database.rzotgorz.managesystem.SQLTreeVisitor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
@@ -103,11 +104,11 @@ public class MetaHandler {
         this.dump();
     }
 
-    public JSONObject getIndexInfo(String indexName) {
+    public DbInfo.IndexInfo getIndexInfo(String indexName) {
         return this.dbInfo.getIndexInfo(indexName);
     }
 
-    public void setPrimary(String tbName, List primary) {
+    public void setPrimary(String tbName, List<String> primary) {
         this.dbInfo.getTbMap().get(tbName).setPrimary(primary);
         this.dump();
     }
@@ -117,7 +118,7 @@ public class MetaHandler {
         this.dump();
     }
 
-    public void addForeign(String tbName, String colName, String foreign) {
+    public void addForeign(String tbName, String colName, SQLTreeVisitor.ForeignKey foreign) {
         this.dbInfo.getTbMap().get(tbName).addForeign(colName, foreign);
         this.dump();
     }
@@ -139,12 +140,9 @@ public class MetaHandler {
         this.dbInfo.getTbMap().remove(oldName);
         this.dbInfo.getTbMap().put(newName, tableInfo);
 
-        for (Map.Entry<String, JSONObject> set : this.dbInfo.getIndex().entrySet()) {
-            if (set.getValue().get("tb").equals(oldName)) {
-                JSONObject object = new JSONObject();
-                object.put("tb", newName);
-                object.put("col", set.getValue().get("col"));
-                this.dbInfo.getIndex().put(set.getKey(), object);
+        for (Map.Entry<String, DbInfo.IndexInfo> set : this.dbInfo.getIndex().entrySet()) {
+            if (set.getValue().tableName.equals(oldName)) {
+                this.dbInfo.getIndex().put(set.getKey(), new DbInfo.IndexInfo(newName, set.getValue().columnName));
             }
         }
     }
@@ -159,7 +157,7 @@ public class MetaHandler {
         this.dump();
     }
 
-    public JSONObject buildTable(ArrayList<String> tableNames) {
+    public JSONObject buildTable(List<String> tableNames) {
         JSONObject object = new JSONObject();
         for (int i = 0; i < tableNames.size(); i++) {
             TableInfo tableInfo = this.getTable(tableNames.get(i));

@@ -65,6 +65,8 @@ public class Main {
         printResults(e);
         e = controller.execute("CREATE TABLE scholars ( studentid INT, awardname VARCHAR(32) NOT NULL, awardtime INT);");
         printResults(e);
+        e = controller.execute("DESC scholars;");
+        printResults(e);
         e = controller.execute("SHOW TABLES;");
         printResults(e);
         e = controller.execute("INSERT INTO scholars VALUES (1, '123', 4);");
