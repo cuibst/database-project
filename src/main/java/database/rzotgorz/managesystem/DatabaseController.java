@@ -4,13 +4,14 @@ import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import database.rzotgorz.indexsystem.FileIndex;
 import database.rzotgorz.indexsystem.IndexManager;
-import database.rzotgorz.managesystem.clauses.OperatorClause;
-import database.rzotgorz.managesystem.clauses.WhereClause;
+import database.rzotgorz.managesystem.clauses.*;
+import database.rzotgorz.managesystem.functions.*;
 import database.rzotgorz.managesystem.results.*;
 import database.rzotgorz.metaSystem.*;
 import database.rzotgorz.parser.SQLLexer;
 import database.rzotgorz.parser.SQLParser;
 import database.rzotgorz.recordsystem.FileHandler;
+import database.rzotgorz.recordsystem.RID;
 import database.rzotgorz.recordsystem.Record;
 import database.rzotgorz.recordsystem.RecordManager;
 import database.rzotgorz.utils.FileScanner;
@@ -25,9 +26,12 @@ import javax.xml.transform.Result;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.NotDirectoryException;
 import java.util.*;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 @Slf4j
 public class DatabaseController {
@@ -246,9 +250,9 @@ public class DatabaseController {
         FileHandler fileHandler = recordManager.openFile(getTablePath(tableName));
         FileScanner fileScanner = new FileScanner(fileHandler);
         for (Record record : fileScanner) {
-            Map<Integer, String> data = pack.info.loadRecord(record);
-            String key = data.get(columnId);
-            long keyId = Long.parseLong(key);
+            List<Object> data = pack.info.loadRecord(record);
+            Object key = data.get(columnId);
+            long keyId = (Long)key;
             index.insert(keyId, record.getRid());
         }
         pack.handler.createIndex(indexName, tableName, columnName);
@@ -267,12 +271,10 @@ public class DatabaseController {
         metaManager.closeMeta(currentUsingDatabase);
     }
 
-    private interface Function {
 
-    }
-
-    public void buildFunctions(String tableName, List<WhereClause> clauses, MetaHandler metaHandler) {
+    public List<Function> buildFunctions(String tableName, List<WhereClause> clauses, MetaHandler metaHandler) {
         TableInfo tableInfo = metaHandler.getTable(tableName);
+        List<Function> functions = new ArrayList<>();
         for (WhereClause clause : clauses) {
             if(clause.getTableName() != null && !clause.getTableName().equals(tableName))
                 continue;
@@ -280,13 +282,155 @@ public class DatabaseController {
             if(index == null)
                 throw new RuntimeException(String.format("Field %s for table %s is unknown.", clause.getColumnName(), clause.getTableName()));
             String type = tableInfo.getTypeList().get(index);
-            if(clause.getClass() == OperatorClause.class) {
+            if(clause instanceof OperatorClause) {
                 if(clause.getTargetColumn() != null) {
-                    if(!tableName.equals(clause.getTableName()))
+                    if (!tableName.equals(clause.getTableName()))
                         continue;
+                    int index2 = tableInfo.getIndex(clause.getTargetColumn());
+                    functions.add(new AttributeCompare(index, index2, ((OperatorClause) clause).getOperator()));
+                } else {
+                    Object value = ((ValueOperatorClause)clause).getValue();
+                    switch (type) {
+                        case "INT":
+                        case "FLOAT":
+                            if (value.getClass() != Integer.class && value.getClass() != Float.class)
+                                throw new RuntimeException(String.format("Type %s expected but get %s instead.", type, value.getClass()));
+                            break;
+                        case "DATE":
+                            if (value.getClass() != Long.class)
+                                throw new RuntimeException(String.format("Type %s expected but get %s instead.", type, value.getClass()));
+                            break;
+                        case "VARCHAR":
+                            if (value.getClass() != String.class)
+                                throw new RuntimeException(String.format("Type %s expected but get %s instead.", type, value.getClass()));
+                            break;
+                    }
+                    functions.add(new ValueCompare(value, index, ((ValueOperatorClause)clause).getOperator()));
                 }
+            } else if(clause instanceof WhereInClause) {
+                Set<Object> values = ((WhereInClause)clause).getValues();
+                functions.add(new InFunction(values, index));
+            } else if(clause instanceof LikeClause) {
+                functions.add(new LikeFunction(((LikeClause)clause).getPattern(), index));
+            } else if(clause instanceof NullClause) {
+                functions.add(new NullFunction(index, ((NullClause)clause).isNull()));
             }
         }
+        return functions;
+    }
+
+    public static class Interval {
+        public int lower;
+        public int upper;
+
+        public Interval(int lower, int upper) {
+            this.lower = lower;
+            this.upper = upper;
+        }
+    }
+
+    public Set<RID> filterIndices(String tableName, List<WhereClause> clauses) {
+        Map<String, Interval> indexMap = new HashMap<>();
+        InfoAndHandler pack = getTableInfo(tableName);
+        clauses.forEach(clause -> {
+            if((! (clause instanceof ValueOperatorClause)) || (clause.getTableName() != null && !clause.getTableName().equals(tableName)))
+                return;
+            Integer index = pack.info.getIndex(clause.getColumnName());
+            if(index != null && pack.info.existsIndex(clause.getColumnName())) {
+                String operator = ((ValueOperatorClause) clause).getOperator();
+                String columnName = clause.getColumnName();
+                Interval interval = indexMap.get(columnName);
+                if(interval == null)
+                    interval = new Interval(Integer.MIN_VALUE, Integer.MAX_VALUE);
+                if(((ValueOperatorClause) clause).getValue().getClass() != Integer.class)
+                    return;
+                int value = (Integer)((ValueOperatorClause) clause).getValue();
+                switch(operator) {
+                    case "=":
+                        interval.lower = Math.max(interval.lower, value);
+                        interval.upper = Math.min(interval.upper, value);
+                        break;
+                    case "<":
+                        interval.upper = Math.min(interval.upper, value - 1);
+                        break;
+                    case ">":
+                        interval.lower = Math.max(interval.lower, value + 1);
+                        break;
+                    case "<=":
+                        interval.upper = Math.min(interval.upper, value);
+                        break;
+                    case ">=":
+                        interval.lower = Math.max(interval.lower, value);
+                        break;
+                    default:
+                        return;
+                }
+                indexMap.put(columnName, interval);
+            }
+        });
+        Set<RID> result = null;
+        for(Map.Entry<String, Interval> entry : indexMap.entrySet()) {
+            FileIndex index = indexManager.openedIndex(currentUsingDatabase, tableName, pack.info.getIndex(entry.getKey()));
+            if(result == null)
+                (result = new HashSet<>()).addAll(Set.copyOf(index.range(entry.getValue().lower, entry.getValue().upper)));
+            else
+                result.retainAll(index.range(entry.getValue().lower, entry.getValue().upper));
+        }
+        return result;
+    }
+
+    public static class RecordDataPack {
+        public final List<Record> records;
+        public final List<List<Object>> data;
+
+        public RecordDataPack(List<Record> records, List<List<Object>> data) {
+            this.records = records;
+            this.data = data;
+        }
+    }
+
+    public RecordDataPack searchIndices(String tableName, List<WhereClause> clauses) throws UnsupportedEncodingException {
+        InfoAndHandler pack = getTableInfo(tableName);
+        List<Function> functionList = buildFunctions(tableName, clauses, pack.handler);
+        Set<RID> remainingRIDs = filterIndices(tableName, clauses);
+        FileHandler handler = recordManager.openFile(getTablePath(tableName));
+        Iterable<Record> recordIterable;
+        if(remainingRIDs != null) {
+            log.info("Scan through index");
+            List<Record> recordList = new ArrayList<>();
+            remainingRIDs.forEach(rid -> recordList.add(handler.getRecord(rid)));
+            recordIterable = recordList;
+        } else {
+            log.info("Scan through FileScanner");
+            recordIterable = new FileScanner(handler);
+        }
+        RecordDataPack recordDataPack = new RecordDataPack(new ArrayList<>(), new ArrayList<>());
+        for(Record record : recordIterable) {
+            List<Object> values = pack.info.loadRecord(record);
+            log.info(values.toString());
+            boolean flag = true;
+            for(Function function : functionList) {
+                flag = flag && function.consume(values);
+            }
+            if(flag) {
+                recordDataPack.records.add(record);
+                recordDataPack.data.add(values);
+            }
+        }
+        return recordDataPack;
+    }
+
+    public TableResult scanIndices(String tableName, List<WhereClause> clauses) throws UnsupportedEncodingException {
+        InfoAndHandler pack = getTableInfo(tableName);
+        RecordDataPack recordDataPack = searchIndices(tableName, clauses);
+        List<List<String>> valuesList = new ArrayList<>();
+        recordDataPack.data.forEach(objects -> {
+            List<String> result = new ArrayList<>();
+            objects.forEach(object -> result.add(object == null ? "NULL" : object.toString()));
+            log.info(result.toString());
+            valuesList.add(result);
+        });
+        return new TableResult(pack.info.getHeader(), valuesList);
     }
 
     public void insertRecord(String tableName, List<Object> valueList) {
@@ -303,51 +447,92 @@ public class DatabaseController {
         }
     }
 
-//    public ResultItem selectRecord(List<Selector> selectors, List<String> tableNames, List<WhereClause> clauses) { //FIXME: NO GROUP BY support
-//        if(currentUsingDatabase == null)
-//            throw new RuntimeException("No database is being used!");
-//        MetaHandler metaHandler = metaManager.openMeta(currentUsingDatabase);
-//        JSONObject columnToTable = metaHandler.buildTable(tableNames);
-//        clauses.forEach(clause -> {
-//            String table = clause.getTableName();
-//            String column = clause.getColumnName();
-//            if(table == null) {
-//                JSONArray tables = columnToTable.getJSONArray(column);
-//                if(tables.size() > 1)
-//                    throw new RuntimeException(String.format("Column %s is ambiguous.", column));
-//                if(tables.size() == 0)
-//                    throw new RuntimeException(String.format("Unknown column %s.", column));
-//                clause.setTableName(tables.getString(0));
-//            }
-//            table = clause.getTargetTable();
-//            column = clause.getTargetColumn();
-//            if(column != null && table == null) {
-//                JSONArray tables = columnToTable.getJSONArray(column);
-//                if(tables.size() > 1)
-//                    throw new RuntimeException(String.format("Column %s is ambiguous.", column));
-//                if(tables.size() == 0)
-//                    throw new RuntimeException(String.format("Unknown column %s.", column));
-//                clause.setTargetTable(tables.getString(0));
-//            }
-//        });
-//        selectors.forEach(selector -> {
-//            String table = selector.getTableName();
-//            String column = selector.getColumnName();
-//            if(table == null) {
-//                JSONArray tables = columnToTable.getJSONArray(column);
-//                if(tables.size() > 1)
-//                    throw new RuntimeException(String.format("Column %s is ambiguous.", column));
-//                if(tables.size() == 0)
-//                    throw new RuntimeException(String.format("Unknown column %s.", column));
-//                selector.setTableName(tables.getString(0));
-//            }
-//        });
-//        Set<Selector.SelectorType> types = new HashSet<>();
-//        selectors.forEach(selector -> types.add(selector.getType()));
-//        if(types.size() > 1 && types.contains(Selector.SelectorType.FIELD))
-//            throw new RuntimeException("No group specified, can't resolve both aggregation and field");
-//
-//    }
+    public ResultItem selectRecord(List<Selector> selectors, List<String> tableNames, List<WhereClause> clauses){ //FIXME: NO GROUP BY support
+        if(currentUsingDatabase == null)
+            throw new RuntimeException("No database is being used!");
+        MetaHandler metaHandler = metaManager.openMeta(currentUsingDatabase);
+        JSONObject columnToTable = metaHandler.buildTable(tableNames);
+        clauses.forEach(clause -> {
+            String table = clause.getTableName();
+            String column = clause.getColumnName();
+            if(table == null) {
+                JSONArray tables = columnToTable.getJSONArray(column);
+                if(tables.size() > 1)
+                    throw new RuntimeException(String.format("Column %s is ambiguous.", column));
+                if(tables.size() == 0)
+                    throw new RuntimeException(String.format("Unknown column %s.", column));
+                clause.setTableName(tables.getString(0));
+            }
+            table = clause.getTargetTable();
+            column = clause.getTargetColumn();
+            if(column != null && table == null) {
+                JSONArray tables = columnToTable.getJSONArray(column);
+                if(tables.size() > 1)
+                    throw new RuntimeException(String.format("Column %s is ambiguous.", column));
+                if(tables.size() == 0)
+                    throw new RuntimeException(String.format("Unknown column %s.", column));
+                clause.setTargetTable(tables.getString(0));
+            }
+        });
+        selectors.forEach(selector -> {
+            String table = selector.getTableName();
+            String column = selector.getColumnName();
+            if(table == null) {
+                JSONArray tables = columnToTable.getJSONArray(column);
+                if(tables.size() > 1)
+                    throw new RuntimeException(String.format("Column %s is ambiguous.", column));
+                if(tables.size() == 0)
+                    throw new RuntimeException(String.format("Unknown column %s.", column));
+                selector.setTableName(tables.getString(0));
+            }
+        });
+        Set<Selector.SelectorType> types = new HashSet<>();
+        selectors.forEach(selector -> types.add(selector.getType()));
+        if(types.size() > 1 && types.contains(Selector.SelectorType.FIELD))
+            throw new RuntimeException("No group specified, can't resolve both aggregation and field");
+        Map<String, TableResult> resultMap = new HashMap<>();
+        for (String tableName : tableNames) {
+            try {
+                resultMap.put(tableName, scanIndices(tableName, clauses));
+            } catch (UnsupportedEncodingException e) {
+                return new MessageResult(e.getMessage(), true);
+            }
+        }
+        //FIXME: deal with join later on.
+        TableResult result = resultMap.get(tableNames.get(0));
+        List<String> headers;
+        List<List<String>> actualData = new ArrayList<>();
+        if(selectors.get(0).getType() == Selector.SelectorType.ALL) {
+            assert selectors.size() == 1;
+            return result;
+        } else if(types.contains(Selector.SelectorType.FIELD)) {
+            headers = new ArrayList<>();
+            selectors.forEach(selector -> headers.add(selector.target()));
+            List<Integer> indices = new ArrayList<>();
+            headers.forEach(s -> indices.add(result.getHeaderIndex(s)));
+            result.getData().forEach(data -> {
+                List<String> data1 = new ArrayList<>();
+                indices.forEach(id -> data1.add(data.get(id)));
+                actualData.add(data1);
+            });
+        } else {
+            //FIXME: aggregators;
+            return result;
+        }
+        return new TableResult(headers, actualData);
+    }
+
+    public ResultItem selectWithLimit(List<Selector> selectors, List<String> tableNames, List<WhereClause> conditions, int limit, int offset) {
+        ResultItem result = selectRecord(selectors, tableNames, conditions);
+        if(!(result instanceof TableResult))
+            return result;
+        List<List<String>> data = (List<List<String>>) ((TableResult) result).getData();
+        if(limit == -1)
+            data = data.subList(offset, data.size());
+        else
+            data = data.subList(offset, offset + limit);
+        return new TableResult(((TableResult) result).getHeaders(), data);
+    }
 
 
     public void shutdown() {

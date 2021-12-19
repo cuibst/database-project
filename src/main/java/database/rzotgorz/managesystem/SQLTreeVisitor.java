@@ -1,5 +1,6 @@
 package database.rzotgorz.managesystem;
 
+import database.rzotgorz.Main;
 import database.rzotgorz.exceptions.ParseError;
 import database.rzotgorz.managesystem.clauses.*;
 import database.rzotgorz.managesystem.results.ListResult;
@@ -276,6 +277,24 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
             return ctx.getText().substring(1, ctx.getText().length() - 1);
         else
             return null;
+    }
+
+
+
+    @Override
+    public Object visitSelect_table(SQLParser.Select_tableContext ctx) {
+        List<String> tableNames = ((PrimaryKey) ctx.identifiers().accept(this)).fields;
+        List<WhereClause> clauses = (ctx.where_and_clause() == null) ? new ArrayList<>() : (List<WhereClause>) ctx.where_and_clause().accept(this);
+        Object selector = ctx.selectors().accept(this);
+        List<Selector> selectors = new ArrayList<>();
+        if(selector instanceof Selector)
+            selectors.add((Selector) selector);
+        else
+            selectors = (List<Selector>) selector;
+        //FIXME: group by later on
+        int limit = (ctx.Integer(0) == null) ? -1 : Integer.parseInt(ctx.Integer(0).getText());
+        int offset = (ctx.Integer(1) == null) ? 0 : Integer.parseInt(ctx.Integer(1).getText());
+        return controller.selectWithLimit(selectors, tableNames, clauses, limit, offset);
     }
 
     @Override

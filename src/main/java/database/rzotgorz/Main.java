@@ -71,6 +71,8 @@ public class Main {
         printResults(e);
         e = controller.execute("INSERT INTO scholars VALUES (1, '123', 4);");
         printResults(e);
+        e = controller.execute("SELECT * FROM scholars;");
+        printResults(e);
 //        e = controller.execute("DROP TABLE scholars;");
 //        printResults(e);
 //        e = controller.execute("SHOW TABLES;");

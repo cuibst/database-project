@@ -7,4 +7,8 @@ public class OperatorClause extends WhereClause{
         super(tableName, columnName);
         this.operator = operator;
     }
+
+    public String getOperator() {
+        return operator;
+    }
 }

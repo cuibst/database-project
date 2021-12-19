@@ -7,4 +7,8 @@ public class NullClause extends WhereClause{
         super(tableName, columnName);
         this.isNull = isNull;
     }
+
+    public boolean isNull() {
+        return isNull;
+    }
 }

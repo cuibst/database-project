@@ -3,11 +3,13 @@ package database.rzotgorz.utils;
 import database.rzotgorz.recordsystem.FileHandler;
 import database.rzotgorz.recordsystem.RID;
 import database.rzotgorz.recordsystem.Record;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.Iterator;
 import java.util.Spliterator;
 import java.util.function.Consumer;
 
+@Slf4j
 public class FileScanner implements Iterable<Record> {
 
     private final FileHandler fileHandler;
@@ -25,9 +27,11 @@ public class FileScanner implements Iterable<Record> {
                 byte[] bitmap = fileHandler.getBitmap(page);
                 slotId++;
                 for(; slotId < bitmap.length; slotId++)
-                    if(bitmap[slotId] == 0)
+                    if(bitmap[slotId] == 1)
                         break OUT;
+                slotId = -1;
             }
+            log.info("Row ID: {}, slot ID: {}", count, slotId);
         }
 
         private Record getCurrentRecord() {

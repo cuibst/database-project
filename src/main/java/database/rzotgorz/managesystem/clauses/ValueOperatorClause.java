@@ -7,4 +7,9 @@ public class ValueOperatorClause extends OperatorClause {
         super(tableName, columnName, operator);
         this.value = value;
     }
+
+    public Object getValue() {
+        return value;
+    }
+
 }

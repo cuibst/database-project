@@ -7,4 +7,8 @@ public class LikeClause extends WhereClause {
         super(tableName, columnName);
         this.pattern = pattern;
     }
+
+    public String getPattern() {
+        return pattern;
+    }
 }
