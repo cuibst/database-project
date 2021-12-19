@@ -20,14 +20,21 @@ public class FileScanner implements Iterable<Record> {
 
         private void moveToNextValidRecord() {
             OUT:
-            for(;count<fileHandler.getFileHeader().getInteger("pageNum");count++) {
+            for (; count < fileHandler.getFileHeader().getInteger("pageNum"); count++) {
                 byte[] page = fileHandler.getPage(count);
-                if(page[0] != 0)
+                if (page[0] != 0)
                     continue;
                 byte[] bitmap = fileHandler.getBitmap(page);
                 slotId++;
-                for(; slotId < bitmap.length; slotId++)
-                    if(bitmap[slotId] == 1)
+//                log.info(bitmap.toString());
+                System.out.println("-------");
+                for (int i = 0; i < bitmap.length; i++) {
+//                    log.info(bitmap[i]);
+                    System.out.println(bitmap[i]);
+                }
+
+                for (; slotId < bitmap.length; slotId++)
+                    if (bitmap[slotId] == 1)
                         break OUT;
                 slotId = -1;
             }
