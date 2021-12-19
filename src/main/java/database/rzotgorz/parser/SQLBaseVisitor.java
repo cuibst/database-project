@@ -1,4 +1,4 @@
-// Generated from D:/git-repo/dbms-homework/src/main/resources\SQL.g4 by ANTLR 4.9.1
+// Generated from D:/git-repo/dbms-homework/src/main/resources\SQL.g4 by ANTLR 4.9.2
 package database.rzotgorz.parser;
 import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
 

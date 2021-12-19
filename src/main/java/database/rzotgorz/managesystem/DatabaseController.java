@@ -367,8 +367,11 @@ public class DatabaseController {
         Set<RID> result = null;
         for (Map.Entry<String, Interval> entry : indexMap.entrySet()) {
             FileIndex index = indexManager.openedIndex(currentUsingDatabase, tableName, pack.info.getIndex(entry.getKey()));
-            if (result == null)
+            if (result == null) {
+                ArrayList<RID> res = index.range(entry.getValue().lower, entry.getValue().upper);
+                log.info(String.valueOf(res == null));
                 (result = new HashSet<>()).addAll(Set.copyOf(index.range(entry.getValue().lower, entry.getValue().upper)));
+            }
             else
                 result.retainAll(index.range(entry.getValue().lower, entry.getValue().upper));
         }
@@ -448,39 +451,39 @@ public class DatabaseController {
         if (currentUsingDatabase == null)
             throw new RuntimeException("No database is being used!");
         MetaHandler metaHandler = metaManager.openMeta(currentUsingDatabase);
-        JSONObject columnToTable = metaHandler.buildTable(tableNames);
+        Map<String,List<String>> columnToTable = metaHandler.buildTable(tableNames);
         clauses.forEach(clause -> {
             String table = clause.getTableName();
             String column = clause.getColumnName();
             if (table == null) {
-                JSONArray tables = columnToTable.getJSONArray(column);
-                if (tables.size() > 1)
+                List<String> tables = columnToTable.get(column);
+                if (tables != null && tables.size() > 1)
                     throw new RuntimeException(String.format("Column %s is ambiguous.", column));
-                if (tables.size() == 0)
+                if (tables == null || tables.size() == 0)
                     throw new RuntimeException(String.format("Unknown column %s.", column));
-                clause.setTableName(tables.getString(0));
+                clause.setTableName(tables.get(0));
             }
             table = clause.getTargetTable();
             column = clause.getTargetColumn();
             if (column != null && table == null) {
-                JSONArray tables = columnToTable.getJSONArray(column);
-                if (tables.size() > 1)
+                List<String> tables = columnToTable.get(column);
+                if (tables != null && tables.size() > 1)
                     throw new RuntimeException(String.format("Column %s is ambiguous.", column));
-                if (tables.size() == 0)
+                if (tables == null || tables.size() == 0)
                     throw new RuntimeException(String.format("Unknown column %s.", column));
-                clause.setTargetTable(tables.getString(0));
+                clause.setTargetTable(tables.get(0));
             }
         });
         selectors.forEach(selector -> {
             String table = selector.getTableName();
             String column = selector.getColumnName();
             if (table == null) {
-                JSONArray tables = columnToTable.getJSONArray(column);
-                if (tables.size() > 1)
+                List<String> tables = columnToTable.get(column);
+                if (tables != null && tables.size() > 1)
                     throw new RuntimeException(String.format("Column %s is ambiguous.", column));
-                if (tables.size() == 0)
+                if (tables == null || tables.size() == 0)
                     throw new RuntimeException(String.format("Unknown column %s.", column));
-                selector.setTableName(tables.getString(0));
+                selector.setTableName(tables.get(0));
             }
         });
         Set<Selector.SelectorType> types = new HashSet<>();
@@ -504,7 +507,9 @@ public class DatabaseController {
             return result;
         } else if (types.contains(Selector.SelectorType.FIELD)) {
             headers = new ArrayList<>();
-            selectors.forEach(selector -> headers.add(selector.target()));
+            for (Selector selector : selectors) {
+                headers.add(selector.target());
+            }
             List<Integer> indices = new ArrayList<>();
             headers.forEach(s -> indices.add(result.getHeaderIndex(s)));
             result.getData().forEach(data -> {
@@ -515,6 +520,12 @@ public class DatabaseController {
         } else {
             //FIXME: aggregators;
             return result;
+        }
+        if(tableNames.size() <= 1) {
+            headers = new ArrayList<>();
+            for (Selector selector : selectors) {
+                headers.add(selector.getColumnName());
+            }
         }
         return new TableResult(headers, actualData);
     }
@@ -578,6 +589,7 @@ public class DatabaseController {
         try {
             context = parser.program();
         } catch (ParseCancellationException e) {
+            e.printStackTrace();
             MessageResult result = new MessageResult(e.getMessage(), true);
             result.cost = visitor.getTimeDelta();
             return result;
@@ -586,6 +598,7 @@ public class DatabaseController {
         try {
             return visitor.visit(context);
         } catch (ParseCancellationException e) {
+            e.printStackTrace();
             MessageResult result = new MessageResult(e.getMessage(), true);
             result.cost = visitor.getTimeDelta();
             return result;

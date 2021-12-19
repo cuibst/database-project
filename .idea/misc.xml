@@ -9,7 +9,7 @@
           <option name="outputDir" value="D:\git-repo\dbms-homework\src\main\java\" />
           <option name="libDir" value="" />
           <option name="encoding" value="" />
-          <option name="pkg" value="parser" />
+          <option name="pkg" value="database.rzotgorz.parser" />
           <option name="language" value="" />
           <option name="generateVisitor" value="true" />
         </PerGrammarGenerationSettings>

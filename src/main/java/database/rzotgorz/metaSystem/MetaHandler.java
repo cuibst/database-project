@@ -1,12 +1,14 @@
 package database.rzotgorz.metaSystem;
 
 import com.alibaba.fastjson.JSONObject;
+import database.rzotgorz.Main;
 import database.rzotgorz.managesystem.SQLTreeVisitor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -157,16 +159,19 @@ public class MetaHandler {
         this.dump();
     }
 
-    public JSONObject buildTable(List<String> tableNames) {
-        JSONObject object = new JSONObject();
-        for (int i = 0; i < tableNames.size(); i++) {
-            TableInfo tableInfo = this.getTable(tableNames.get(i));
-            ArrayList<String> columns = new ArrayList<>();
-            for (int j = 0; j < tableInfo.getColumns().size(); j++) {
-                columns.add(tableNames.get(i));
+    public Map<String, List<String>> buildTable(List<String> tableNames) {
+        Map<String, List<String>> tableMap = new HashMap<>();
+        for (String tableName : tableNames) {
+            TableInfo tableInfo = this.getTable(tableName);
+            for(ColumnInfo column : tableInfo.getColumns().values()) {
+                String name = column.getName();
+                List<String> list = tableMap.get(name);
+                if(list == null)
+                    list = new ArrayList<>();
+                list.add(tableName);
+                tableMap.put(name, list);
             }
-            object.put(tableNames.get(i), columns);
         }
-        return object;
+        return tableMap;
     }
 }

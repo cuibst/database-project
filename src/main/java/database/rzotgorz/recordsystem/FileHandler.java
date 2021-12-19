@@ -165,7 +165,7 @@ public class FileHandler {
     public Record getRecord(RID rid) {
         int pageId = rid.getPageId();
         int slotId = rid.getSlotId();
-        byte[] data = fm.readPage(fileId, pageId);
+        byte[] data = fm.getPageData(fileId, pageId);
         int offset = this.getRecordOffset(slotId);
         return new Record(rid, Arrays.copyOfRange(data, offset, offset + Integer.parseInt(fileHeader.get("recordLen").toString())));
     }

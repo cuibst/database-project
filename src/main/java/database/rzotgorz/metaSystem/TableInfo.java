@@ -141,7 +141,7 @@ public class TableInfo implements Serializable {
     }
 
     public boolean existsIndex(String name) {
-        return this.columns.containsKey(name);
+        return this.index.contains(name);
     }
 
     public void createIndex(String name, int rootId) {

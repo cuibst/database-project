@@ -117,7 +117,7 @@ where_clause
     ;
 
 column
-    : Identifier '.' Identifier
+    : (Identifier '.')? Identifier
     ;
 
 expression

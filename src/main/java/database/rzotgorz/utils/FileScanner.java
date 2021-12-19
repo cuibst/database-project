@@ -36,7 +36,6 @@ public class FileScanner implements Iterable<Record> {
                         break OUT;
                 slotId = -1;
             }
-            log.info("Row ID: {}, slot ID: {}", count, slotId);
         }
 
         private Record getCurrentRecord() {

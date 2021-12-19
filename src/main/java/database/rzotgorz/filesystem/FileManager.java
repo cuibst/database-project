@@ -200,8 +200,10 @@ public class FileManager {
 
     private byte[] getPage(int fileId, int pageId) {
         Page page = new Page(pageId, fileId);
-        if (pageToIndex.containsKey(page))
+        if (pageToIndex.containsKey(page)) {
+            access(pageToIndex.get(page));
             return pageBuffer[pageToIndex.get(page)];
+        }
 
         int index = controller.findFreeNodeId();
         Page lastPage = indexToPage[index];
