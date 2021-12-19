@@ -16,7 +16,6 @@ import java.util.*;
 @Slf4j
 public class Parser {
     public static Calendar parserDate(String s) {
-        Date date = new Date();
         Calendar calendar = Calendar.getInstance();
         try {
             calendar.setTime(new Date(s));
@@ -186,19 +185,21 @@ public class Parser {
         }
     }
 
-    public static Map<Integer, String> decode(List<Integer> sizeList, List<String> typeList, int totalList, Record record) throws UnsupportedEncodingException {
+    public static List<Object> decode(List<Integer> sizeList, List<String> typeList, int totalList, Record record) throws UnsupportedEncodingException {
         byte[] data = record.getData();
         assert (sizeList.size() == typeList.size());
         int pos = 0;
-        Map<Integer, String> map = new HashMap<>();
+        List<Object> list = new ArrayList<>();
+//        Map<Integer, String> map = new HashMap<>();
         for (int i = 0; i < sizeList.size(); i++) {
             byte[] process = new byte[sizeList.get(i)];
             for (int j = 0; j < sizeList.get(i); j++) {
                 process[j] = data[pos + j];
             }
-            map.put(i, antiParser(process, typeList.get(i)));
+            list.add(antiParser(process, typeList.get(i)));
+//            map.put(i, antiParser(process, typeList.get(i)));
             pos += sizeList.get(i);
         }
-        return map;
+        return list;
     }
 }

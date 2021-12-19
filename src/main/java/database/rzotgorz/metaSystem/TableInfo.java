@@ -72,12 +72,10 @@ public class TableInfo implements Serializable {
             __++;
             this.typeList.add(entry.getValue().getType());
             this.sizeList.add(entry.getValue().getSize());
-//            log.info(String.);
         }
         this.totalSize = 0;
         for (int i = 0; i < this.sizeList.size(); i++)
             this.totalSize += this.sizeList.get(i);
-//        log.info(String.valueOf(this.totalSize));
     }
 
     public void insertColumn(ColumnInfo columnInfo) {
@@ -115,7 +113,7 @@ public class TableInfo implements Serializable {
         this.primary = array;
     }
 
-    public Map<Integer, String> loadRecord(Record record) throws UnsupportedEncodingException {
+    public List<Object> loadRecord(Record record) throws UnsupportedEncodingException {
         return Parser.decode(this.sizeList, this.typeList, this.totalSize, record);
     }
 
