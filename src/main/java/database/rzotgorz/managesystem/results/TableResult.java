@@ -3,24 +3,29 @@ package database.rzotgorz.managesystem.results;
 import database.rzotgorz.utils.PrettyTable;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
 public class TableResult extends ResultItem {
 
     private final List<String> headers;
-    private final Iterable<List<String>> data;
+    private final Iterable<List<Object>> data;
     private final PrettyTable prettyTable;
 
-    public TableResult(List<String> header, Iterable<List<String>> data) {
+    public TableResult(List<String> header, Iterable<List<Object>> data) {
 //        log.info(header.toString());
         prettyTable = new PrettyTable(header);
-        data.forEach(prettyTable::addRow);
+        data.forEach(list -> {
+            List<String> strings = new ArrayList<>();
+            list.forEach(obj -> strings.add(obj.toString()));
+            prettyTable.addRow(strings);
+        });
         this.headers = header;
         this.data = data;
     }
 
-    public Iterable<List<String>> getData() {
+    public Iterable<List<Object>> getData() {
         return data;
     }
 

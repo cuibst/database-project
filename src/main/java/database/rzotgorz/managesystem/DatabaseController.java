@@ -1,7 +1,5 @@
 package database.rzotgorz.managesystem;
 
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
 import database.rzotgorz.indexsystem.FileIndex;
 import database.rzotgorz.indexsystem.IndexManager;
 import database.rzotgorz.managesystem.clauses.*;
@@ -41,7 +39,7 @@ public class DatabaseController {
     private final String rootPath;
     private final Set<String> databases = new HashSet<>();
     private String currentUsingDatabase = null;
-    private SQLTreeVisitor visitor;
+    private final SQLTreeVisitor visitor;
 
     public Set<String> getDatabases() {
         return databases;
@@ -167,7 +165,7 @@ public class DatabaseController {
         InfoAndHandler pack = getTableInfo(tableName);
         List<String> header = Arrays.asList("Field", "Type", "Null", "Key", "Default", "Extra");
         Map<String, String[]> data = pack.info.describe();
-        List<List<String>> columns = new ArrayList<>();
+        List<List<Object>> columns = new ArrayList<>();
         data.values().forEach(val -> columns.add(Arrays.asList(val)));
         return new TableResult(header, columns);
     }
@@ -212,10 +210,6 @@ public class DatabaseController {
             if (metaHandler.existsIndex(tableName + "." + column))
                 removeIndex(tableName + "." + column);
         });
-    }
-
-    public void addColumn(String tableName, ColumnInfo columnInfo) {
-
     }
 
     public void removeForeignKeyConstraint(String tableName, String column, String constraintName) {
@@ -422,10 +416,10 @@ public class DatabaseController {
     public TableResult scanIndices(String tableName, List<WhereClause> clauses) throws UnsupportedEncodingException {
         InfoAndHandler pack = getTableInfo(tableName);
         RecordDataPack recordDataPack = searchIndices(tableName, clauses);
-        List<List<String>> valuesList = new ArrayList<>();
+        List<List<Object>> valuesList = new ArrayList<>();
         recordDataPack.data.forEach(objects -> {
-            List<String> result = new ArrayList<>();
-            objects.forEach(object -> result.add(object == null ? "NULL" : object.toString()));
+            List<Object> result = new ArrayList<>();
+            objects.forEach(object -> result.add(object == null ? "NULL" : object));
 //            log.info(result.toString());
             valuesList.add(result);
         });
@@ -501,7 +495,7 @@ public class DatabaseController {
         //FIXME: deal with join later on.
         TableResult result = resultMap.get(tableNames.get(0));
         List<String> headers;
-        List<List<String>> actualData = new ArrayList<>();
+        List<List<Object>> actualData = new ArrayList<>();
         if (selectors.get(0).getType() == Selector.SelectorType.ALL) {
             assert selectors.size() == 1;
             return result;
@@ -513,8 +507,10 @@ public class DatabaseController {
             List<Integer> indices = new ArrayList<>();
             headers.forEach(s -> indices.add(result.getHeaderIndex(s)));
             result.getData().forEach(data -> {
-                List<String> data1 = new ArrayList<>();
-                indices.forEach(id -> data1.add(data.get(id)));
+                List<Object> data1 = new ArrayList<>();
+                indices.forEach(id -> {
+                    data1.add(data.get(id)) ;
+                });
                 actualData.add(data1);
             });
         } else {
@@ -534,7 +530,7 @@ public class DatabaseController {
         ResultItem result = selectRecord(selectors, tableNames, conditions);
         if (!(result instanceof TableResult))
             return result;
-        List<List<String>> data = (List<List<String>>) ((TableResult) result).getData();
+        List<List<Object>> data = (List<List<Object>>) ((TableResult) result).getData();
         if (limit == -1)
             data = data.subList(offset, data.size());
         else

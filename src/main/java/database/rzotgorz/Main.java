@@ -71,7 +71,7 @@ public class Main {
         printResults(e);
         e = controller.execute("INSERT INTO scholars VALUES (1, '123', 4);");
         printResults(e);
-        e = controller.execute("SELECT awardtime FROM scholars WHERE awardtime IS NOT NULL AND awardname = '123';");
+        e = controller.execute("SELECT awardtime FROM scholars WHERE awardtime IN (SELECT awardtime FROM scholars);");
         printResults(e);
 //        e = controller.execute("DROP TABLE scholars;");
 //        printResults(e);

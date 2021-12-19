@@ -3,11 +3,9 @@ package database.rzotgorz.managesystem;
 import database.rzotgorz.Main;
 import database.rzotgorz.exceptions.ParseError;
 import database.rzotgorz.managesystem.clauses.*;
-import database.rzotgorz.managesystem.results.ListResult;
-import database.rzotgorz.managesystem.results.MessageResult;
-import database.rzotgorz.managesystem.results.OperationResult;
-import database.rzotgorz.managesystem.results.ResultItem;
+import database.rzotgorz.managesystem.results.*;
 import database.rzotgorz.metaSystem.ColumnInfo;
+import database.rzotgorz.metaSystem.MetaHandler;
 import database.rzotgorz.metaSystem.TableInfo;
 import database.rzotgorz.parser.SQLBaseVisitor;
 import database.rzotgorz.parser.SQLParser;
@@ -362,7 +360,17 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
         Column column = (Column) ctx.column().accept(this);
         ResultItem resultItem = (ResultItem) ctx.select_table().accept(this);
         //FIXME: Convert the result item to value list
-        return new WhereInClause(column.tableName, column.columnName, new ArrayList<>());
+        if(resultItem instanceof MessageResult)
+            throw new RuntimeException(((MessageResult) resultItem).getMessage());
+        assert resultItem instanceof TableResult;
+        TableResult result = (TableResult) resultItem;
+        List<Object> values = new ArrayList<>();
+        result.getData().forEach(list -> {
+            if(list.size() != 1)
+                throw new RuntimeException("In clause get multiple columns.");
+            values.add(list.get(0));
+        });
+        return new WhereInClause(column.tableName, column.columnName, values);
     }
 
     @Override
