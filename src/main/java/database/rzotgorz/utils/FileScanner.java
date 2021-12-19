@@ -26,12 +26,10 @@ public class FileScanner implements Iterable<Record> {
                     continue;
                 byte[] bitmap = fileHandler.getBitmap(page);
                 slotId++;
-//                log.info(bitmap.toString());
-                System.out.println("-------");
-                for (int i = 0; i < bitmap.length; i++) {
-//                    log.info(bitmap[i]);
-                    System.out.println(bitmap[i]);
-                }
+//                System.out.println("-------");
+//                for (int i = 0; i < bitmap.length; i++) {
+//                    System.out.println(bitmap[i]);
+//                }
 
                 for (; slotId < bitmap.length; slotId++)
                     if ((bitmap[slotId / 8] & (1 << (slotId & 7))) > 0)
@@ -46,7 +44,7 @@ public class FileScanner implements Iterable<Record> {
         }
 
         public RecordIterator() {
-            this.count = 0;
+            this.count = 1;
             this.slotId = -1;
             moveToNextValidRecord();
         }

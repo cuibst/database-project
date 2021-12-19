@@ -13,7 +13,7 @@ public class TableResult extends ResultItem {
     private final PrettyTable prettyTable;
 
     public TableResult(List<String> header, Iterable<List<String>> data) {
-        log.info(header.toString());
+//        log.info(header.toString());
         prettyTable = new PrettyTable(header);
         data.forEach(prettyTable::addRow);
         this.headers = header;

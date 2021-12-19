@@ -99,6 +99,7 @@ public class FileHandler {
     public byte[] getBitmap(byte[] bytes) {
         int head = HEADER_SIZE;
         int tail = head + Integer.parseInt(fileHeader.get("bitmapLength").toString());
+//        log.info(fileHeader.get("pageNum").toString());
         return Arrays.copyOfRange(bytes, head, tail);
     }
 
@@ -201,6 +202,7 @@ public class FileHandler {
             page = this.setNextVacancy(page, vacancyPage);
         }
         fm.putPage(fileId, vacancyPage, page);
+//        log.info("already done");
         record.setRid(new RID(vacancyPage, slotId));
         return record;
     }

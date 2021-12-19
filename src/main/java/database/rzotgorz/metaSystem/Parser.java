@@ -150,12 +150,20 @@ public class Parser {
         switch (type) {
             case "VARCHAR": {
                 byte[] process = new byte[data.length - 1];
-                for (int i = 0; i < process.length; i++) {
+                StringBuilder builder = new StringBuilder();
+                for (int i = 0; i < data.length + 1; i++) {
                     if (data[i + 1] == 0)
                         break;
-                    process[i] = data[i + 1];
+                    builder.append((char) data[i + 1]);
                 }
-                String asked = new String(process, "UTF-8");
+//                String str = builder.toString();
+//                for (int i = 0; i < process.length; i++) {
+//                    if (data[i + 1] == 0)
+//                        break;
+//                    process[i] = data[i + 1];
+//                }
+//                String asked = new String(process, "UTF-8");
+                String asked = builder.toString();
                 return (data[0] == (byte) 0) ? null : asked;
             }
             case "INT": {

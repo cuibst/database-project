@@ -16,22 +16,18 @@ import database.rzotgorz.recordsystem.Record;
 import database.rzotgorz.recordsystem.RecordManager;
 import database.rzotgorz.utils.FileScanner;
 import lombok.extern.slf4j.Slf4j;
-import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.Parser;
+import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.atn.ATNConfigSet;
 import org.antlr.v4.runtime.dfa.DFA;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
 
-import javax.xml.transform.Result;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.NotDirectoryException;
 import java.util.*;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
 @Slf4j
 public class DatabaseController {
@@ -179,27 +175,27 @@ public class DatabaseController {
     public void addUniqueConstraint(String tableName, String columnName, String constraintName) throws Exception {
         InfoAndHandler pack = getTableInfo(tableName);
         pack.handler.addUnique(pack.info, columnName, constraintName);
-        if(!pack.info.existsIndex(constraintName))
+        if (!pack.info.existsIndex(constraintName))
             createIndex(constraintName, tableName, columnName);
     }
 
     public void addForeignKeyConstraint(String tableName, String columnName, SQLTreeVisitor.ForeignKey foreignKey, String constraintName) throws Exception {
-        if(currentUsingDatabase == null)
+        if (currentUsingDatabase == null)
             throw new RuntimeException("No database is being used!");
         MetaHandler metaHandler = metaManager.openMeta(currentUsingDatabase);
         metaHandler.addForeign(tableName, columnName, foreignKey);
-        if(constraintName == null && !metaHandler.existsIndex(foreignKey.targetTable + '.' + foreignKey.name))
+        if (constraintName == null && !metaHandler.existsIndex(foreignKey.targetTable + '.' + foreignKey.name))
             createIndex(foreignKey.targetTable + '.' + foreignKey.name, foreignKey.targetTable, foreignKey.name);
-        else if(!metaHandler.existsIndex(constraintName))
+        else if (!metaHandler.existsIndex(constraintName))
             createIndex(constraintName, foreignKey.targetTable, foreignKey.name);
     }
 
     public void setPrimary(String tableName, SQLTreeVisitor.PrimaryKey primaryKey) throws Exception {
-        if(currentUsingDatabase == null)
+        if (currentUsingDatabase == null)
             throw new RuntimeException("No database is being used!");
         MetaHandler metaHandler = metaManager.openMeta(currentUsingDatabase);
         metaHandler.setPrimary(tableName, primaryKey == null ? null : primaryKey.fields);
-        if(primaryKey == null)
+        if (primaryKey == null)
             return;
         for (String column : primaryKey.fields) {
             if (!metaHandler.existsIndex(tableName + "." + column))
@@ -208,12 +204,12 @@ public class DatabaseController {
     }
 
     public void removePrimary(String tableName) {
-        if(currentUsingDatabase == null)
+        if (currentUsingDatabase == null)
             throw new RuntimeException("No database is being used!");
         MetaHandler metaHandler = metaManager.openMeta(currentUsingDatabase);
         List<String> key = metaHandler.getTable(tableName).getPrimary();
         key.forEach(column -> {
-            if(metaHandler.existsIndex(tableName + "." + column))
+            if (metaHandler.existsIndex(tableName + "." + column))
                 removeIndex(tableName + "." + column);
         });
     }
@@ -223,9 +219,9 @@ public class DatabaseController {
     }
 
     public void removeForeignKeyConstraint(String tableName, String column, String constraintName) {
-        if(currentUsingDatabase == null)
+        if (currentUsingDatabase == null)
             throw new RuntimeException("No database is being used!");
-        if(constraintName == null) {
+        if (constraintName == null) {
             MetaHandler metaHandler = metaManager.openMeta(currentUsingDatabase);
             metaHandler.removeForeign(tableName, column);
             SQLTreeVisitor.ForeignKey key = metaHandler.getTable(tableName).getForeign().get(column);
@@ -252,19 +248,19 @@ public class DatabaseController {
         for (Record record : fileScanner) {
             List<Object> data = pack.info.loadRecord(record);
             Object key = data.get(columnId);
-            long keyId = (Long)key;
+            long keyId = (Long) key;
             index.insert(keyId, record.getRid());
         }
         pack.handler.createIndex(indexName, tableName, columnName);
     }
 
     public void removeIndex(String indexName) {
-        if(currentUsingDatabase == null)
+        if (currentUsingDatabase == null)
             throw new RuntimeException("No database is being used!");
         MetaHandler metaHandler = metaManager.openMeta(currentUsingDatabase);
         DbInfo.IndexInfo indexInfo = metaHandler.getIndexInfo(indexName);
         TableInfo tableInfo = metaHandler.getTable(indexInfo.tableName);
-        if(!metaHandler.existsIndex(indexName))
+        if (!metaHandler.existsIndex(indexName))
             throw new RuntimeException(String.format("Index %s doesn't exist!", indexName));
         tableInfo.removeIndex(indexName);
         metaHandler.removeIndex(indexName);
@@ -276,20 +272,20 @@ public class DatabaseController {
         TableInfo tableInfo = metaHandler.getTable(tableName);
         List<Function> functions = new ArrayList<>();
         for (WhereClause clause : clauses) {
-            if(clause.getTableName() != null && !clause.getTableName().equals(tableName))
+            if (clause.getTableName() != null && !clause.getTableName().equals(tableName))
                 continue;
             Integer index = tableInfo.getIndex(clause.getColumnName());
-            if(index == null)
+            if (index == null)
                 throw new RuntimeException(String.format("Field %s for table %s is unknown.", clause.getColumnName(), clause.getTableName()));
             String type = tableInfo.getTypeList().get(index);
-            if(clause instanceof OperatorClause) {
-                if(clause.getTargetColumn() != null) {
+            if (clause instanceof OperatorClause) {
+                if (clause.getTargetColumn() != null) {
                     if (!tableName.equals(clause.getTableName()))
                         continue;
                     int index2 = tableInfo.getIndex(clause.getTargetColumn());
                     functions.add(new AttributeCompare(index, index2, ((OperatorClause) clause).getOperator()));
                 } else {
-                    Object value = ((ValueOperatorClause)clause).getValue();
+                    Object value = ((ValueOperatorClause) clause).getValue();
                     switch (type) {
                         case "INT":
                         case "FLOAT":
@@ -305,15 +301,15 @@ public class DatabaseController {
                                 throw new RuntimeException(String.format("Type %s expected but get %s instead.", type, value.getClass()));
                             break;
                     }
-                    functions.add(new ValueCompare(value, index, ((ValueOperatorClause)clause).getOperator()));
+                    functions.add(new ValueCompare(value, index, ((ValueOperatorClause) clause).getOperator()));
                 }
-            } else if(clause instanceof WhereInClause) {
-                Set<Object> values = ((WhereInClause)clause).getValues();
+            } else if (clause instanceof WhereInClause) {
+                Set<Object> values = ((WhereInClause) clause).getValues();
                 functions.add(new InFunction(values, index));
-            } else if(clause instanceof LikeClause) {
-                functions.add(new LikeFunction(((LikeClause)clause).getPattern(), index));
-            } else if(clause instanceof NullClause) {
-                functions.add(new NullFunction(index, ((NullClause)clause).isNull()));
+            } else if (clause instanceof LikeClause) {
+                functions.add(new LikeFunction(((LikeClause) clause).getPattern(), index));
+            } else if (clause instanceof NullClause) {
+                functions.add(new NullFunction(index, ((NullClause) clause).isNull()));
             }
         }
         return functions;
@@ -333,19 +329,19 @@ public class DatabaseController {
         Map<String, Interval> indexMap = new HashMap<>();
         InfoAndHandler pack = getTableInfo(tableName);
         clauses.forEach(clause -> {
-            if((! (clause instanceof ValueOperatorClause)) || (clause.getTableName() != null && !clause.getTableName().equals(tableName)))
+            if ((!(clause instanceof ValueOperatorClause)) || (clause.getTableName() != null && !clause.getTableName().equals(tableName)))
                 return;
             Integer index = pack.info.getIndex(clause.getColumnName());
-            if(index != null && pack.info.existsIndex(clause.getColumnName())) {
+            if (index != null && pack.info.existsIndex(clause.getColumnName())) {
                 String operator = ((ValueOperatorClause) clause).getOperator();
                 String columnName = clause.getColumnName();
                 Interval interval = indexMap.get(columnName);
-                if(interval == null)
+                if (interval == null)
                     interval = new Interval(Integer.MIN_VALUE, Integer.MAX_VALUE);
-                if(((ValueOperatorClause) clause).getValue().getClass() != Integer.class)
+                if (((ValueOperatorClause) clause).getValue().getClass() != Integer.class)
                     return;
-                int value = (Integer)((ValueOperatorClause) clause).getValue();
-                switch(operator) {
+                int value = (Integer) ((ValueOperatorClause) clause).getValue();
+                switch (operator) {
                     case "=":
                         interval.lower = Math.max(interval.lower, value);
                         interval.upper = Math.min(interval.upper, value);
@@ -369,9 +365,9 @@ public class DatabaseController {
             }
         });
         Set<RID> result = null;
-        for(Map.Entry<String, Interval> entry : indexMap.entrySet()) {
+        for (Map.Entry<String, Interval> entry : indexMap.entrySet()) {
             FileIndex index = indexManager.openedIndex(currentUsingDatabase, tableName, pack.info.getIndex(entry.getKey()));
-            if(result == null)
+            if (result == null)
                 (result = new HashSet<>()).addAll(Set.copyOf(index.range(entry.getValue().lower, entry.getValue().upper)));
             else
                 result.retainAll(index.range(entry.getValue().lower, entry.getValue().upper));
@@ -395,24 +391,24 @@ public class DatabaseController {
         Set<RID> remainingRIDs = filterIndices(tableName, clauses);
         FileHandler handler = recordManager.openFile(getTablePath(tableName));
         Iterable<Record> recordIterable;
-        if(remainingRIDs != null) {
+        if (remainingRIDs != null) {
             log.info("Scan through index");
             List<Record> recordList = new ArrayList<>();
             remainingRIDs.forEach(rid -> recordList.add(handler.getRecord(rid)));
             recordIterable = recordList;
         } else {
-            log.info("Scan through FileScanner");
+//            log.info("Scan through FileScanner");
             recordIterable = new FileScanner(handler);
         }
         RecordDataPack recordDataPack = new RecordDataPack(new ArrayList<>(), new ArrayList<>());
-        for(Record record : recordIterable) {
+        for (Record record : recordIterable) {
             List<Object> values = pack.info.loadRecord(record);
-            log.info(values.toString());
+//            log.info(values.toString());
             boolean flag = true;
-            for(Function function : functionList) {
+            for (Function function : functionList) {
                 flag = flag && function.consume(values);
             }
-            if(flag) {
+            if (flag) {
                 recordDataPack.records.add(record);
                 recordDataPack.data.add(values);
             }
@@ -427,10 +423,10 @@ public class DatabaseController {
         recordDataPack.data.forEach(objects -> {
             List<String> result = new ArrayList<>();
             objects.forEach(object -> result.add(object == null ? "NULL" : object.toString()));
-            log.info(result.toString());
+//            log.info(result.toString());
             valuesList.add(result);
         });
-        log.info(pack.info.getHeader().toString());
+//        log.info(pack.info.getHeader().toString());
         return new TableResult(pack.info.getHeader(), valuesList);
     }
 
@@ -448,29 +444,29 @@ public class DatabaseController {
         }
     }
 
-    public ResultItem selectRecord(List<Selector> selectors, List<String> tableNames, List<WhereClause> clauses){ //FIXME: NO GROUP BY support
-        if(currentUsingDatabase == null)
+    public ResultItem selectRecord(List<Selector> selectors, List<String> tableNames, List<WhereClause> clauses) { //FIXME: NO GROUP BY support
+        if (currentUsingDatabase == null)
             throw new RuntimeException("No database is being used!");
         MetaHandler metaHandler = metaManager.openMeta(currentUsingDatabase);
         JSONObject columnToTable = metaHandler.buildTable(tableNames);
         clauses.forEach(clause -> {
             String table = clause.getTableName();
             String column = clause.getColumnName();
-            if(table == null) {
+            if (table == null) {
                 JSONArray tables = columnToTable.getJSONArray(column);
-                if(tables.size() > 1)
+                if (tables.size() > 1)
                     throw new RuntimeException(String.format("Column %s is ambiguous.", column));
-                if(tables.size() == 0)
+                if (tables.size() == 0)
                     throw new RuntimeException(String.format("Unknown column %s.", column));
                 clause.setTableName(tables.getString(0));
             }
             table = clause.getTargetTable();
             column = clause.getTargetColumn();
-            if(column != null && table == null) {
+            if (column != null && table == null) {
                 JSONArray tables = columnToTable.getJSONArray(column);
-                if(tables.size() > 1)
+                if (tables.size() > 1)
                     throw new RuntimeException(String.format("Column %s is ambiguous.", column));
-                if(tables.size() == 0)
+                if (tables.size() == 0)
                     throw new RuntimeException(String.format("Unknown column %s.", column));
                 clause.setTargetTable(tables.getString(0));
             }
@@ -478,18 +474,18 @@ public class DatabaseController {
         selectors.forEach(selector -> {
             String table = selector.getTableName();
             String column = selector.getColumnName();
-            if(table == null) {
+            if (table == null) {
                 JSONArray tables = columnToTable.getJSONArray(column);
-                if(tables.size() > 1)
+                if (tables.size() > 1)
                     throw new RuntimeException(String.format("Column %s is ambiguous.", column));
-                if(tables.size() == 0)
+                if (tables.size() == 0)
                     throw new RuntimeException(String.format("Unknown column %s.", column));
                 selector.setTableName(tables.getString(0));
             }
         });
         Set<Selector.SelectorType> types = new HashSet<>();
         selectors.forEach(selector -> types.add(selector.getType()));
-        if(types.size() > 1 && types.contains(Selector.SelectorType.FIELD))
+        if (types.size() > 1 && types.contains(Selector.SelectorType.FIELD))
             throw new RuntimeException("No group specified, can't resolve both aggregation and field");
         Map<String, TableResult> resultMap = new HashMap<>();
         for (String tableName : tableNames) {
@@ -503,10 +499,10 @@ public class DatabaseController {
         TableResult result = resultMap.get(tableNames.get(0));
         List<String> headers;
         List<List<String>> actualData = new ArrayList<>();
-        if(selectors.get(0).getType() == Selector.SelectorType.ALL) {
+        if (selectors.get(0).getType() == Selector.SelectorType.ALL) {
             assert selectors.size() == 1;
             return result;
-        } else if(types.contains(Selector.SelectorType.FIELD)) {
+        } else if (types.contains(Selector.SelectorType.FIELD)) {
             headers = new ArrayList<>();
             selectors.forEach(selector -> headers.add(selector.target()));
             List<Integer> indices = new ArrayList<>();
@@ -525,10 +521,10 @@ public class DatabaseController {
 
     public ResultItem selectWithLimit(List<Selector> selectors, List<String> tableNames, List<WhereClause> conditions, int limit, int offset) {
         ResultItem result = selectRecord(selectors, tableNames, conditions);
-        if(!(result instanceof TableResult))
+        if (!(result instanceof TableResult))
             return result;
         List<List<String>> data = (List<List<String>>) ((TableResult) result).getData();
-        if(limit == -1)
+        if (limit == -1)
             data = data.subList(offset, data.size());
         else
             data = data.subList(offset, offset + limit);

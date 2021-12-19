@@ -188,7 +188,6 @@ public class FileManager {
 
     public int createPage(int fileId, byte[] data) {
         long length = -1;
-//        log.info("in here");
         try (RandomAccessFile file = new RandomAccessFile("." + File.separator + "data" + File.separator + idToFilename[fileId], "rw")) {
             length = file.length();
             file.seek(length);
