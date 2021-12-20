@@ -11,8 +11,8 @@ public class LikeFunction implements Function {
     public LikeFunction(String pattern, int index) {
         this.index = index;
         String regex = pattern.replace("%%", "\r").replace("%?", "\n").replace("%_", "\0");
-        regex = regex.replace("%", ".*").replace("\\?", ".").replace("_", ".");
-        this.pattern = regex.replace("\r", "%").replace("\n", "\\?").replace("\0", "_");
+        regex = regex.replace("%", ".*").replace("?", ".").replace("_", ".");
+        this.pattern = regex.replace("\r", "%").replace("\n", "?").replace("\0", "_");
     }
 
     @Override

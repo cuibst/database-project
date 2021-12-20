@@ -1,11 +1,9 @@
 package database.rzotgorz.managesystem;
 
-import database.rzotgorz.Main;
 import database.rzotgorz.exceptions.ParseError;
 import database.rzotgorz.managesystem.clauses.*;
 import database.rzotgorz.managesystem.results.*;
 import database.rzotgorz.metaSystem.ColumnInfo;
-import database.rzotgorz.metaSystem.MetaHandler;
 import database.rzotgorz.metaSystem.TableInfo;
 import database.rzotgorz.parser.SQLBaseVisitor;
 import database.rzotgorz.parser.SQLParser;
@@ -13,7 +11,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.nio.file.FileAlreadyExistsException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -277,8 +274,6 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
             return null;
     }
 
-
-
     @Override
     public Object visitSelect_table(SQLParser.Select_tableContext ctx) {
         List<String> tableNames = ((PrimaryKey) ctx.identifiers().accept(this)).fields;
@@ -289,10 +284,13 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
             selectors.add((Selector) selector);
         else
             selectors = (List<Selector>) selector;
+
         //FIXME: group by later on
+        Column column = ctx.column() == null ? null : (Column) ctx.column().accept(this);
+
         int limit = (ctx.Integer(0) == null) ? -1 : Integer.parseInt(ctx.Integer(0).getText());
         int offset = (ctx.Integer(1) == null) ? 0 : Integer.parseInt(ctx.Integer(1).getText());
-        return controller.selectWithLimit(selectors, tableNames, clauses, limit, offset);
+        return controller.selectWithLimit(selectors, tableNames, clauses, limit, offset, column);
     }
 
     @Override
@@ -310,7 +308,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
             return new Selector(Selector.SelectorType.COUNTER, "*", "*", Selector.AggregatorType.MAX);
         Column column = (Column) ctx.column().accept(this);
         if(ctx.aggregator() != null)
-            return new Selector(Selector.SelectorType.AGGREGATION, column.tableName, column.columnName, Selector.AggregatorType.valueOf(ctx.getText()));
+            return new Selector(Selector.SelectorType.AGGREGATION, column.tableName, column.columnName, Selector.AggregatorType.valueOf(ctx.aggregator().getText()));
         return new Selector(Selector.SelectorType.FIELD, column.tableName, column.columnName, Selector.AggregatorType.MAX);
     }
 

@@ -441,7 +441,9 @@ public class DatabaseController {
         }
     }
 
-    public ResultItem selectRecord(List<Selector> selectors, List<String> tableNames, List<WhereClause> clauses) { //FIXME: NO GROUP BY support
+
+
+    public ResultItem selectRecord(List<Selector> selectors, List<String> tableNames, List<WhereClause> clauses, SQLTreeVisitor.Column group) { //FIXME: NO GROUP BY support
         if (currentUsingDatabase == null)
             throw new RuntimeException("No database is being used!");
         MetaHandler metaHandler = metaManager.openMeta(currentUsingDatabase);
@@ -480,9 +482,15 @@ public class DatabaseController {
                 selector.setTableName(tables.get(0));
             }
         });
+
+        if(group != null && group.tableName == null)
+            group.tableName = tableNames.get(0);
+
+        String groupBy = group == null ? null : group.tableName + "." + group.columnName;
+
         Set<Selector.SelectorType> types = new HashSet<>();
         selectors.forEach(selector -> types.add(selector.getType()));
-        if (types.size() > 1 && types.contains(Selector.SelectorType.FIELD))
+        if (group == null && types.size() > 1 && types.contains(Selector.SelectorType.FIELD))
             throw new RuntimeException("No group specified, can't resolve both aggregation and field");
         Map<String, TableResult> resultMap = new HashMap<>();
         for (String tableName : tableNames) {
@@ -496,38 +504,80 @@ public class DatabaseController {
         TableResult result = resultMap.get(tableNames.get(0));
         List<String> headers;
         List<List<Object>> actualData = new ArrayList<>();
-        if (selectors.get(0).getType() == Selector.SelectorType.ALL) {
-            assert selectors.size() == 1;
-            return result;
-        } else if (types.contains(Selector.SelectorType.FIELD)) {
-            headers = new ArrayList<>();
-            for (Selector selector : selectors) {
-                headers.add(selector.target());
+        if(group != null) {
+            int index = result.getHeaderIndex(groupBy);
+            Map<Object, List<List<Object>>> groups = new HashMap<>();
+            for(List<Object> row : result.getData()) {
+                Object id = row.get(index);
+                List<List<Object>> rowList = groups.computeIfAbsent(id, k -> new ArrayList<>());
+                rowList.add(row);
             }
-            List<Integer> indices = new ArrayList<>();
-            headers.forEach(s -> indices.add(result.getHeaderIndex(s)));
-            result.getData().forEach(data -> {
-                List<Object> data1 = new ArrayList<>();
-                indices.forEach(id -> {
-                    data1.add(data.get(id)) ;
-                });
-                actualData.add(data1);
-            });
+            if(selectors.get(0).getType() == Selector.SelectorType.ALL) {
+                assert selectors.size() == 1;
+                groups.values().forEach(grp -> actualData.add(grp.get(0)));
+                return new TableResult(result.getHeaders(), actualData);
+            }
+            for(List<List<Object>> grp : groups.values()) {
+                Map<String, List<Object>> categorizedGroup = new HashMap<>();
+                for(int i=0;i<result.getHeaders().size();i++) {
+                    List<Object> objectList = new ArrayList<>();
+                    for (List<Object> record : grp) {
+                        objectList.add(record.get(i));
+                    }
+                    categorizedGroup.put(result.getHeaders().get(i), objectList);
+                }
+                categorizedGroup.put("*.*", categorizedGroup.get(result.getHeaders().get(0)));
+                List<Object> data = new ArrayList<>();
+                selectors.forEach(selector -> data.add(selector.select(categorizedGroup.get(selector.target()))));
+                actualData.add(data);
+            }
         } else {
-            //FIXME: aggregators;
-            return result;
-        }
-        if(tableNames.size() <= 1) {
-            headers = new ArrayList<>();
-            for (Selector selector : selectors) {
-                headers.add(selector.getColumnName());
+            if (selectors.get(0).getType() == Selector.SelectorType.ALL) {
+                assert selectors.size() == 1;
+                return result;
+            } else if (types.contains(Selector.SelectorType.FIELD)) {
+                headers = new ArrayList<>();
+                for (Selector selector : selectors) {
+                    headers.add(selector.target());
+                }
+                List<Integer> indices = new ArrayList<>();
+                headers.forEach(s -> indices.add(result.getHeaderIndex(s)));
+                result.getData().forEach(data -> {
+                    List<Object> data1 = new ArrayList<>();
+                    indices.forEach(id -> data1.add(data.get(id)));
+                    actualData.add(data1);
+                });
+            } else {
+                if(result.getData() == null) {
+                    List<Object> data1 = new ArrayList<>();
+                    for(int i=0;i<result.getHeaders().size();i++)
+                        data1.add(null);
+                    actualData.add(data1);
+                } else {
+                    Map<String, List<Object>> valueMap = new HashMap<>();
+                    for(int i=0;i<result.getHeaders().size();i++) {
+                        List<Object> objectList = new ArrayList<>();
+                        for (List<Object> data1 : result.getData()) {
+                            objectList.add(data1.get(i));
+                        }
+                        valueMap.put(result.getHeaders().get(i), objectList);
+                    }
+                    valueMap.put("*.*", valueMap.get(result.getHeaders().get(0)));
+                    List<Object> data = new ArrayList<>();
+                    selectors.forEach(selector -> data.add(selector.select(valueMap.get(selector.target()))));
+                    actualData.add(data);
+                }
             }
+        }
+        headers = new ArrayList<>();
+        for (Selector selector : selectors) {
+            headers.add(selector.toString(tableNames.size() > 1));
         }
         return new TableResult(headers, actualData);
     }
 
-    public ResultItem selectWithLimit(List<Selector> selectors, List<String> tableNames, List<WhereClause> conditions, int limit, int offset) {
-        ResultItem result = selectRecord(selectors, tableNames, conditions);
+    public ResultItem selectWithLimit(List<Selector> selectors, List<String> tableNames, List<WhereClause> conditions, int limit, int offset, SQLTreeVisitor.Column group) {
+        ResultItem result = selectRecord(selectors, tableNames, conditions, group);
         if (!(result instanceof TableResult))
             return result;
         List<List<Object>> data = (List<List<Object>>) ((TableResult) result).getData();

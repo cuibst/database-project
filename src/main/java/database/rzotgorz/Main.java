@@ -71,7 +71,17 @@ public class Main {
         printResults(e);
         e = controller.execute("INSERT INTO scholars VALUES (1, '123', 4);");
         printResults(e);
-        e = controller.execute("SELECT awardtime FROM scholars WHERE awardtime IN (SELECT awardtime FROM scholars);");
+        e = controller.execute("INSERT INTO scholars VALUES (2, '123', 4);");
+        printResults(e);
+        e = controller.execute("INSERT INTO scholars VALUES (3, '123', 4);");
+        printResults(e);
+        e = controller.execute("INSERT INTO scholars VALUES (1, '1234', 4);");
+        printResults(e);
+        e = controller.execute("INSERT INTO scholars VALUES (2, '1234', 4);");
+        printResults(e);
+        e = controller.execute("INSERT INTO scholars VALUES (4, '1234', 4);");
+        printResults(e);
+        e = controller.execute("SELECT MAX(studentid), awardname FROM scholars GROUP BY awardname;");
         printResults(e);
 //        e = controller.execute("DROP TABLE scholars;");
 //        printResults(e);

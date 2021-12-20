@@ -87,6 +87,21 @@ public class Selector {
         }
     }
 
+    public String toString(boolean multiTable) {
+        if(multiTable)
+            return toString();
+        switch (type) {
+            case FIELD:
+                return columnName;
+            case COUNTER:
+                return "COUNT(*)";
+            case AGGREGATION:
+                return String.format("%s(%s)", aggregatorType.toString(), columnName);
+            default:
+                return "";
+        }
+    }
+
     public Object select(List<Object> data) {
         switch (type) {
             case FIELD:
