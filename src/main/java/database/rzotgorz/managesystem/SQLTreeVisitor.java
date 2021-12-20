@@ -12,10 +12,7 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 
 import java.io.FileNotFoundException;
 import java.nio.file.FileAlreadyExistsException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Slf4j
 public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
@@ -131,11 +128,11 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     }
 
     private static class ColumnBundle {
-        public Map<String, ColumnInfo> columnInfos;
+        public LinkedHashMap<String, ColumnInfo> columnInfos;
         public Map<String, ForeignKey> foreignKeys;
         public PrimaryKey primaryKey;
 
-        public ColumnBundle(Map<String, ColumnInfo> columnInfos, Map<String, ForeignKey> foreignKeys, PrimaryKey primaryKey) {
+        public ColumnBundle(LinkedHashMap<String, ColumnInfo> columnInfos, Map<String, ForeignKey> foreignKeys, PrimaryKey primaryKey) {
             this.columnInfos = columnInfos;
             this.foreignKeys = foreignKeys;
             this.primaryKey = primaryKey;
@@ -169,8 +166,8 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
 
     @Override
     public ColumnBundle visitField_list(SQLParser.Field_listContext ctx) {
-        Map<String, ColumnInfo> columns = new HashMap<>();
-        Map<String, ForeignKey> foreignKeyMap = new HashMap<>();
+        LinkedHashMap<String, ColumnInfo> columns = new LinkedHashMap<>();
+        Map<String, ForeignKey> foreignKeyMap = new LinkedHashMap<>();
         PrimaryKey primaryKey = null;
         for (SQLParser.FieldContext field : ctx.field()) {
             if (field.getClass() == SQLParser.Normal_fieldContext.class) {
@@ -250,7 +247,6 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     public ResultItem visitInsert_into_table(SQLParser.Insert_into_tableContext ctx) {
         String tableName = ctx.getChild(2).getText();
         List<Object> valueLists = (List<Object>) ctx.value_lists().accept(this);
-//        log.info("value list size: {}", valueLists.size());
         for (Object valueList : valueLists)
             controller.insertRecord(tableName, (List<Object>) valueList);
         return new OperationResult("inserted", valueLists.size());
@@ -269,7 +265,6 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
         List<Object> result = new ArrayList<>();
         for (SQLParser.ValueContext value : ctx.value())
             result.add(value.accept(this));
-//        log.info("value list size: {}", result.size());
         return result;
     }
 

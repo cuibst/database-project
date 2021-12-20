@@ -68,19 +68,12 @@
             <version>3.12.0</version>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/org.jline/jline-terminal -->
+        <!-- https://mvnrepository.com/artifact/org.jline/jline -->
         <dependency>
             <groupId>org.jline</groupId>
-            <artifactId>jline-terminal</artifactId>
+            <artifactId>jline</artifactId>
             <version>3.21.0</version>
         </dependency>
-
-        <dependency>
-            <groupId>org.jline</groupId>
-            <artifactId>jline-reader</artifactId>
-            <version>3.21.0</version>
-        </dependency>
-
 
 
     </dependencies>

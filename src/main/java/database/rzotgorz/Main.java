@@ -10,8 +10,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
+import org.jline.builtins.Completers;
+import org.jline.reader.Completer;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
+import org.jline.reader.impl.completer.AggregateCompleter;
+import org.jline.reader.impl.completer.ArgumentCompleter;
+import org.jline.reader.impl.completer.NullCompleter;
+import org.jline.reader.impl.completer.StringsCompleter;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
 
@@ -19,6 +25,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.NotDirectoryException;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 @Slf4j
 public class Main {
@@ -43,9 +50,6 @@ public class Main {
 
     public static void main(String[] args) throws IOException {
 
-//        MetaManager metaManager = new MetaManager();
-
-
         SQLTreeVisitor visitor = new SQLTreeVisitor();
         DatabaseController controller;
         try {
@@ -56,7 +60,90 @@ public class Main {
         }
 
         Terminal terminal = TerminalBuilder.builder().system(true).build();
-        LineReader lineReader = LineReaderBuilder.builder().terminal(terminal).build();
+
+        Completer createCompleter = new ArgumentCompleter(
+                new StringsCompleter("CREATE"),
+                new StringsCompleter("DATABASE", "TABLE"),
+                NullCompleter.INSTANCE
+        );
+        Completer dropCompleter = new ArgumentCompleter(
+                new StringsCompleter("DROP"),
+                new StringsCompleter("DATABASE", "TABLE"),
+                NullCompleter.INSTANCE
+        );
+        Completer showCompleter = new ArgumentCompleter(
+                new StringsCompleter("SHOW"),
+                new StringsCompleter("TABLES", "DATABASES", "INDEXES"),
+                NullCompleter.INSTANCE
+        );
+        Completer multiCompleter = new ArgumentCompleter(
+                new StringsCompleter("DESC", "USE"),
+                NullCompleter.INSTANCE
+        );
+        Completer alterCompleter = new ArgumentCompleter(
+                new StringsCompleter("ALTER"),
+                new StringsCompleter("TABLE"),
+                Completers.AnyCompleter.INSTANCE,
+                new StringsCompleter("ADD", "DROP"),
+                new StringsCompleter("INDEX", "PRIMARY KEY", "FOREIGN KEY", "CONSTRAINT", "UNIQUE")
+        );
+        Completer insertCompleter = new ArgumentCompleter(
+                new StringsCompleter("INSERT"),
+                new StringsCompleter("INTO"),
+                Completers.AnyCompleter.INSTANCE,
+                new StringsCompleter("VALUES"),
+                NullCompleter.INSTANCE
+        );
+        Completer selectCompleter = new ArgumentCompleter(
+                new StringsCompleter("SELECT"),
+                Completers.AnyCompleter.INSTANCE,
+                new StringsCompleter("FROM"),
+                Completers.AnyCompleter.INSTANCE,
+                new StringsCompleter("WHERE", "GROUP BY", "LIMIT", "OFFSET")
+        );
+        Completer deleteCompleter = new ArgumentCompleter(
+                new StringsCompleter("DELETE"),
+                new StringsCompleter("FROM"),
+                Completers.AnyCompleter.INSTANCE,
+                new StringsCompleter("WHERE"),
+                NullCompleter.INSTANCE
+        );
+        Completer updateCompleter = new ArgumentCompleter(
+                new StringsCompleter("UPDATE"),
+                Completers.AnyCompleter.INSTANCE,
+                new StringsCompleter("SET"),
+                Completers.AnyCompleter.INSTANCE,
+                new StringsCompleter("WHERE"),
+                NullCompleter.INSTANCE
+        );
+        Completer loadCompleter = new ArgumentCompleter(
+                new StringsCompleter("LOAD FROM FILE"),
+                Completers.AnyCompleter.INSTANCE,
+                new StringsCompleter("TO TABLE"),
+                NullCompleter.INSTANCE
+        );
+        Completer dumpCompleter = new ArgumentCompleter(
+                new StringsCompleter("DUMP TO FILE"),
+                Completers.AnyCompleter.INSTANCE,
+                new StringsCompleter("FROM TABLE"),
+                NullCompleter.INSTANCE
+        );
+        Completer aggregateCompleter = new AggregateCompleter(
+                createCompleter,
+                deleteCompleter,
+                dumpCompleter,
+                dropCompleter,
+                loadCompleter,
+                updateCompleter,
+                showCompleter,
+                alterCompleter,
+                insertCompleter,
+                selectCompleter,
+                multiCompleter
+        );
+
+
+        LineReader lineReader = LineReaderBuilder.builder().terminal(terminal).completer(aggregateCompleter).build();
         StringBuilder line = new StringBuilder();
         while (true) {
             String prompt = controller.getCurrentUsingDatabase() == null ? "llhdb> " : String.format("llhdb(%s)> ", controller.getCurrentUsingDatabase());
@@ -75,181 +162,6 @@ public class Main {
             }
         }
         controller.shutdown();
-
-//        Object e = controller.execute("CREATE DATABASE test;");
-//        printResults(e);
-//        e = controller.execute("CREATE DATABASE hello_world;");
-//        printResults(e);
-//        e = controller.execute("SHOW DATABASES;");
-//        printResults(e);
-//        e = controller.execute("SHOW TABLES;");
-//        printResults(e);
-//        e = controller.execute("USE test;");
-//        printResults(e);
-//        e = controller.execute("SHOW TABLES;");
-//        printResults(e);
-//        e = controller.execute("CREATE TABLE scholars ( studentid INT, awardname VARCHAR(32) NOT NULL, awardtime INT);");
-//        printResults(e);
-//        e = controller.execute("DESC scholars;");
-//        printResults(e);
-//        e = controller.execute("SHOW TABLES;");
-//        printResults(e);
-//        e = controller.execute("INSERT INTO scholars VALUES (1, '123', 4);");
-//        printResults(e);
-//        e = controller.execute("INSERT INTO scholars VALUES (2, '123', 4);");
-//        printResults(e);
-        Object e = controller.execute("CREATE DATABASE test;");
-        printResults(e);
-        e = controller.execute("CREATE DATABASE hello_world;");
-        printResults(e);
-        e = controller.execute("SHOW DATABASES;");
-        printResults(e);
-        e = controller.execute("SHOW TABLES;");
-        printResults(e);
-        e = controller.execute("USE test;");
-        printResults(e);
-        e = controller.execute("SHOW TABLES;");
-        printResults(e);
-//        e = controller.execute("CREATE TABLE scholars ( studentid INT, awardname VARCHAR(32) NOT NULL, awardtime INT);");
-//        printResults(e);
-//        e = controller.execute("INSERT INTO scholars VALUES (1, '123', 4);");
-//        printResults(e);
-//        e = controller.execute("DESC scholars;");
-//        printResults(e);
-        e = controller.execute("LOAD FROM FILE \'scholars\' TO TABLE scholars1 ;");
-        printResults(e);
-        e = controller.execute("SELECT * FROM scholars1;");
-        printResults(e);
-        e = controller.execute("INSERT INTO scholars1 VALUES (2, '123', 4);");
-        printResults(e);
-        e = controller.execute("SELECT * FROM scholars1;");
-        printResults(e);
-//        e = controller.execute("INSERT INTO scholars VALUES (3, '123', 4);");
-//        printResults(e);
-//        e = controller.execute("INSERT INTO scholars VALUES (1, '1234', 4);");
-//        printResults(e);
-//        e = controller.execute("INSERT INTO scholars VALUES (2, '1234', 4);");
-//        printResults(e);
-//        e = controller.execute("INSERT INTO scholars VALUES (4, '1234', 4);");
-//        printResults(e);
-//        e = controller.execute("SELECT MAX(studentid), awardname FROM scholars GROUP BY awardname;");
-//        printResults(e);
-//        e = controller.execute("DUMP TO FILE \'scholars\' FROM TABLE scholars;");
-//        printResults(e);
-
-//        e = controller.execute("SELECT awardtime FROM scholars WHERE awardtime IN (SELECT awardtime FROM scholars);");
-//        printResults(e);
-
-//        ArrayList<String> list = new ArrayList<>();
-//        list.add("1");
-//        list.add("2");
-//        list.add("3");
-//        try {
-//            FileOutputStream ff = new FileOutputStream("h.txt");
-//            ObjectOutputStream ss = new ObjectOutputStream(ff);
-//            A a = new A("llh", list);
-//            ss.writeObject(a);
-//            ss.close();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//        try {
-//            ObjectInputStream ois = new ObjectInputStream(
-//                    new BufferedInputStream(new FileInputStream(new File("h.txt"))));
-//            A a = (A) ois.readObject();
-//            ois.close();
-//            System.out.println(a.name);
-//            System.out.println(a.list);
-//
-//        } catch (IOException | ClassNotFoundException e) {
-//            e.printStackTrace();
-//        }
-
-        //        FileManager fileManager = new FileManager();
-//        IndexManager indexManager = new IndexManager(fileManager, "llh");
-//        FileIndex fileIndex = indexManager.createIndex("llh", "llhTest");
-//        IndexHandler indexHandler = indexManager.getHandler("llh");
-//
-//        for (int i = 0; i < 3000; i++)
-//            for (int j = 0; j < 30; j++) {
-////                log.info("i: {} , j: {}", i, j);
-//                fileIndex.insert(i * 30 + j, new RID(i, j));
-//            }
-////        indexManager.shutdown();
-////        fileIndex.remove(340, new RID(11, 10));
-//        int rootId = fileIndex.getRootId();
-//        indexManager.closeHandler("llh");
-//        indexHandler = indexManager.getHandler("llh");
-////        indexManager.closeIndex("llhTest", rootId);
-////        fileIndex = null;
-//        fileIndex = indexManager.openedIndex("llh", "llhTest", rootId);
-//
-////        for (int i = 0; i < 30; i++)
-////            for (int j = 0; j < 30; j++)
-////                fileIndex.remove(i * 30 + j, new RID(i, j));
-////                fileIndex.remove(0, new RID(0, 0));
-////        for (int i = 0; i < 30; i++)
-////            for (int j = 40; j < 60; j++)
-////                fileIndex.insert(i * 30 + j, new RID(i, j));
-//
-//
-//        System.out.println(fileIndex.getRootNode().getChildKeys());
-////        fileIndex.range(20, 500);
-//        for (int i = 0; i < fileIndex.getRootNode().getChildKeys().size(); i++) {
-//            if (((InterNode) fileIndex.getRootNode()).childNodes.get(i).getClass() == InterNode.class) {
-//                System.out.println((((InterNode) (fileIndex.getRootNode())).childNodes.get(i).getChildKeys()));
-//            }
-//        }
-//        for (int i = 0; i < fileIndex.getRootNode().getChildKeys().size(); i++) {
-//            if (((InterNode) fileIndex.getRootNode()).childNodes.get(i).getClass() == InterNode.class) {
-//                System.out.println("in here");
-//                System.out.println(((InterNode) (((InterNode) (fileIndex.getRootNode())).childNodes.get(i))).getChildKeysSize());
-//            }
-//        }
-
-//        System.out.println("finished");
-//        indexManager.shutdown();
-//        String[] testStrings = {
-//                "CREATE DATABASE student;",
-//                "ABC 123"
-//        };
-//
-//        for(String s : testStrings) {
-//            log.info("Input: {}", s);
-//            run(s);
-//        }
-//
-//        FileManager manager = new FileManager();
-//        int fid1 = manager.openFile("test1.txt");
-//        int fid2 = manager.openFile("test2.txt");
-//        for(int pageId = 0; pageId < 256; pageId ++) {
-//            byte[] data = manager.getPageRef(fid1, pageId); //"mark as dirty" has been done in getPageRef
-//            data[0] = (byte)pageId;
-//            data[1] = (byte)fid1;
-//
-//            data = manager.getPageRef(fid2, pageId);
-//            data[0] = (byte)pageId;
-//            data[1] = (byte)fid2;
-//        }
-//
-//        manager.printPageData();
-//
-//        for(int pageId = 0; pageId < 10; pageId ++) {
-//            byte[] data = manager.getPageData(fid1, pageId);
-//            log.info("From fid:{} pid:{} read: {}, {}", fid1, pageId, data[0], data[1]);
-//            manager.access(fid1, pageId);
-//            data = manager.getPageData(fid2, pageId);
-//            log.info("From fid:{} pid:{} read: {}, {}", fid2, pageId, data[0], data[1]);
-//            manager.access(fid2, pageId);
-//        }
-//
-
-//        FileHandler handler=rm.openFile("llh.dat");
-//        byte[] bytes=ByteIntegerConverter.intToBytes(22);
-//        for(int i=0;i<1640;i++)
-//            handler.insertRecord(bytes);
-//        rm.closeFile("llh.dat");
-
     }
 
     private static void printResults(Object e) {

@@ -9,17 +9,14 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.io.*;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Data
 @Slf4j
 public class Csv {
 
-    public static Map<String, ColumnInfo> parserHeader(String csvName) {
-        Map<String, ColumnInfo> map = new HashMap<>();
+    public static LinkedHashMap<String, ColumnInfo> parserHeader(String csvName) {
+        LinkedHashMap<String, ColumnInfo> map = new LinkedHashMap<>();
         String[] headers;
         try {
             CsvReader reader = new CsvReader(csvName, ',', Charset.forName("UTF-8"));

@@ -7,16 +7,13 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Data
 @Slf4j
 public class TableInfo implements Serializable {
     private String name;
-    private Map<String, ColumnInfo> columns;
+    private LinkedHashMap<String, ColumnInfo> columns;
     private List<String> primary;
     private Map<String, SQLTreeVisitor.ForeignKey> foreign;
     private List<String> index;
@@ -26,7 +23,7 @@ public class TableInfo implements Serializable {
     private HashMap<String, Integer> colIndex;
     private int totalSize;
 
-    public TableInfo(String name, Map<String, ColumnInfo> columns) {
+    public TableInfo(String name, LinkedHashMap<String, ColumnInfo> columns) {
         this.name = name;
         this.columns = columns;
         this.primary = new ArrayList<>();
@@ -40,8 +37,8 @@ public class TableInfo implements Serializable {
         this.updateParams();
     }
 
-    public Map<String, String[]> describe() {
-        Map<String, String[]> objects = new HashMap<>();
+    public LinkedHashMap<String, String[]> describe() {
+        LinkedHashMap<String, String[]> objects = new LinkedHashMap<>();
         for (Map.Entry<String, ColumnInfo> entry : columns.entrySet()) {
             objects.put(entry.getKey(), entry.getValue().getDescription());
         }

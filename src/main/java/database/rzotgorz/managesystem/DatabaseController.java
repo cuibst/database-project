@@ -27,6 +27,7 @@ import java.io.UnsupportedEncodingException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.NotDirectoryException;
 import java.util.*;
+import java.util.function.BiConsumer;
 
 @Slf4j
 public class DatabaseController {
@@ -110,8 +111,10 @@ public class DatabaseController {
             }
         databaseDirectory.delete();
         databases.remove(name);
-        if (currentUsingDatabase.equals(name))
+        if (currentUsingDatabase != null && currentUsingDatabase.equals(name)) {
+            currentUsingDatabase = null;
             return new DatabaseChangeResult("null");
+        }
         return null;
     }
 
@@ -169,9 +172,9 @@ public class DatabaseController {
     public ResultItem describeTable(String tableName) {
         InfoAndHandler pack = getTableInfo(tableName);
         List<String> header = Arrays.asList("Field", "Type", "Null", "Key", "Default", "Extra");
-        Map<String, String[]> data = pack.info.describe();
+        LinkedHashMap<String, String[]> data = pack.info.describe();
         List<List<Object>> columns = new ArrayList<>();
-        data.values().forEach(val -> columns.add(Arrays.asList(val)));
+        data.forEach((s, strings) -> columns.add(Arrays.asList(strings)));
         return new TableResult(header, columns);
     }
 
@@ -368,7 +371,6 @@ public class DatabaseController {
             FileIndex index = indexManager.openedIndex(currentUsingDatabase, tableName, pack.info.getIndex(entry.getKey()));
             if (result == null) {
                 ArrayList<RID> res = index.range(entry.getValue().lower, entry.getValue().upper);
-                log.info(String.valueOf(res == null));
                 (result = new HashSet<>()).addAll(Set.copyOf(index.range(entry.getValue().lower, entry.getValue().upper)));
             } else
                 result.retainAll(index.range(entry.getValue().lower, entry.getValue().upper));
@@ -393,7 +395,6 @@ public class DatabaseController {
         FileHandler handler = recordManager.openFile(getTablePath(tableName));
         Iterable<Record> recordIterable;
         if (remainingRIDs != null) {
-            log.info("Scan through index");
             List<Record> recordList = new ArrayList<>();
             remainingRIDs.forEach(rid -> recordList.add(handler.getRecord(rid)));
             recordIterable = recordList;
@@ -422,10 +423,8 @@ public class DatabaseController {
         recordDataPack.data.forEach(objects -> {
             List<Object> result = new ArrayList<>();
             objects.forEach(object -> result.add(object == null ? "NULL" : object));
-//            log.info(result.toString());
             valuesList.add(result);
         });
-//        log.info(pack.info.getHeader().toString());
         return new TableResult(pack.info.getHeader(), valuesList);
     }
 
@@ -515,7 +514,6 @@ public class DatabaseController {
             }
         });
         selectors.forEach(selector ->
-
         {
             String table = selector.getTableName();
             String column = selector.getColumnName();
@@ -537,9 +535,7 @@ public class DatabaseController {
         Set<Selector.SelectorType> types = new HashSet<>();
         selectors.forEach(selector -> types.add(selector.getType()));
         if (group == null && types.size() > 1 && types.contains(Selector.SelectorType.FIELD))
-            throw new
-
-                    RuntimeException("No group specified, can't resolve both aggregation and field");
+            throw new RuntimeException("No group specified, can't resolve both aggregation and field");
 
         Map<String, TableResult> resultMap = new HashMap<>();
         for (
