@@ -132,13 +132,22 @@ public class TableInfo implements Serializable {
         }
     }
 
-    public ArrayList<String> getHeader() {
-        ArrayList<String> list = new ArrayList<>();
+    public List<String> getHeader() {
+        List<String> list = new ArrayList<>();
         for (Map.Entry<String, ColumnInfo> entry : this.columns.entrySet()) {
             list.add(this.name + "." + entry.getValue().getName());
         }
         return list;
     }
+
+    public List<NameAndTypePack> getPack() {
+        List<NameAndTypePack> list = new ArrayList<>();
+        for (Map.Entry<String, ColumnInfo> entry : this.columns.entrySet()) {
+            list.add(new NameAndTypePack(entry.getValue().getType(), entry.getValue().getName(), entry.getValue().getSize()));
+        }
+        return list;
+    }
+
 
     public boolean existsIndex(String name) {
         return this.index.contains(name);

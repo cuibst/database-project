@@ -103,8 +103,6 @@ public class FileIndex {
 //                log.info("in here");
 //            if (((InterNode) rootNode).childNodes == null)
 //                log.info("in here");
-            if (newNodes == null)
-                log.info("in here");
             root.addChildNodes(this.rootNode);
             root.addChildNodes(node);
             this.rootNode = root;

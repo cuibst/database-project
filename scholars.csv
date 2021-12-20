@@ -1,0 +1,7 @@
+studentid(INT),awardname(VARCHAR(33)),awardtime(INT)
+1,123,4
+2,123,4
+3,123,4
+1,1234,4
+2,1234,4
+4,1234,4

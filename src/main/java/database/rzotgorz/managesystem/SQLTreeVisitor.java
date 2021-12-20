@@ -111,6 +111,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
         }
     }
 
+
     public static class ForeignKey {
         public String targetTable;
         public String name;
@@ -228,6 +229,11 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     }
 
     @Override
+    public Object visitDump_data(SQLParser.Dump_dataContext ctx) {
+        return controller.storeData(ctx.String().getText() + ".csv", ctx.Identifier().getText());
+    }
+
+    @Override
     public PrimaryKey visitIdentifiers(SQLParser.IdentifiersContext ctx) {
         List<String> keys = new ArrayList<>();
         for (TerminalNode node : ctx.Identifier())
@@ -274,13 +280,14 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
             return null;
     }
 
+
     @Override
     public Object visitSelect_table(SQLParser.Select_tableContext ctx) {
         List<String> tableNames = ((PrimaryKey) ctx.identifiers().accept(this)).fields;
         List<WhereClause> clauses = (ctx.where_and_clause() == null) ? new ArrayList<>() : (List<WhereClause>) ctx.where_and_clause().accept(this);
         Object selector = ctx.selectors().accept(this);
         List<Selector> selectors = new ArrayList<>();
-        if(selector instanceof Selector)
+        if (selector instanceof Selector)
             selectors.add((Selector) selector);
         else
             selectors = (List<Selector>) selector;
@@ -295,7 +302,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
 
     @Override
     public Object visitSelectors(SQLParser.SelectorsContext ctx) {
-        if(ctx.getChild(0).getText().equals("*"))
+        if (ctx.getChild(0).getText().equals("*"))
             return new Selector(Selector.SelectorType.ALL, "*", "*", Selector.AggregatorType.MAX);
         List<Selector> selectors = new ArrayList<>();
         ctx.selector().forEach(selectorContext -> selectors.add((Selector) selectorContext.accept(this)));
@@ -304,10 +311,10 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
 
     @Override
     public Selector visitSelector(SQLParser.SelectorContext ctx) {
-        if(ctx.Count() != null)
+        if (ctx.Count() != null)
             return new Selector(Selector.SelectorType.COUNTER, "*", "*", Selector.AggregatorType.MAX);
         Column column = (Column) ctx.column().accept(this);
-        if(ctx.aggregator() != null)
+        if (ctx.aggregator() != null)
             return new Selector(Selector.SelectorType.AGGREGATION, column.tableName, column.columnName, Selector.AggregatorType.valueOf(ctx.aggregator().getText()));
         return new Selector(Selector.SelectorType.FIELD, column.tableName, column.columnName, Selector.AggregatorType.MAX);
     }
@@ -324,8 +331,8 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
         Column column = (Column) ctx.column().accept(this);
         String op = ctx.operator().getText();
         Object value = ctx.expression().accept(this);
-        if(value.getClass() == Column.class)
-            return new ColumnOperatorClause(column.tableName, column.columnName, op, ((Column)value).tableName, ((Column)value).columnName);
+        if (value.getClass() == Column.class)
+            return new ColumnOperatorClause(column.tableName, column.columnName, op, ((Column) value).tableName, ((Column) value).columnName);
         else
             return new ValueOperatorClause(column.tableName, column.columnName, op, value);
     }
@@ -358,13 +365,13 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
         Column column = (Column) ctx.column().accept(this);
         ResultItem resultItem = (ResultItem) ctx.select_table().accept(this);
         //FIXME: Convert the result item to value list
-        if(resultItem instanceof MessageResult)
+        if (resultItem instanceof MessageResult)
             throw new RuntimeException(((MessageResult) resultItem).getMessage());
         assert resultItem instanceof TableResult;
         TableResult result = (TableResult) resultItem;
         List<Object> values = new ArrayList<>();
         result.getData().forEach(list -> {
-            if(list.size() != 1)
+            if (list.size() != 1)
                 throw new RuntimeException("In clause get multiple columns.");
             values.add(list.get(0));
         });
@@ -374,7 +381,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     @Override
     public LikeClause visitWhere_like_string(SQLParser.Where_like_stringContext ctx) {
         Column column = (Column) ctx.column().accept(this);
-        String pattern = ctx.String().getText().substring(1, ctx.String().getText().length()-1);
+        String pattern = ctx.String().getText().substring(1, ctx.String().getText().length() - 1);
         return new LikeClause(column.tableName, column.columnName, pattern);
     }
 
@@ -390,7 +397,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
 
     @Override
     public Object visitColumn(SQLParser.ColumnContext ctx) {
-        if(ctx.Identifier().size() == 1)
+        if (ctx.Identifier().size() == 1)
             return new Column(null, ctx.Identifier(0).getText());
         return new Column(ctx.Identifier(0).getText(), ctx.Identifier(1).getText());
     }

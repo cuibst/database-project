@@ -12,6 +12,7 @@ import database.rzotgorz.recordsystem.FileHandler;
 import database.rzotgorz.recordsystem.RID;
 import database.rzotgorz.recordsystem.Record;
 import database.rzotgorz.recordsystem.RecordManager;
+import database.rzotgorz.utils.Csv;
 import database.rzotgorz.utils.FileScanner;
 import lombok.extern.slf4j.Slf4j;
 import org.antlr.v4.runtime.Parser;
@@ -365,8 +366,7 @@ public class DatabaseController {
                 ArrayList<RID> res = index.range(entry.getValue().lower, entry.getValue().upper);
                 log.info(String.valueOf(res == null));
                 (result = new HashSet<>()).addAll(Set.copyOf(index.range(entry.getValue().lower, entry.getValue().upper)));
-            }
-            else
+            } else
                 result.retainAll(index.range(entry.getValue().lower, entry.getValue().upper));
         }
         return result;
@@ -394,13 +394,11 @@ public class DatabaseController {
             remainingRIDs.forEach(rid -> recordList.add(handler.getRecord(rid)));
             recordIterable = recordList;
         } else {
-//            log.info("Scan through FileScanner");
             recordIterable = new FileScanner(handler);
         }
         RecordDataPack recordDataPack = new RecordDataPack(new ArrayList<>(), new ArrayList<>());
         for (Record record : recordIterable) {
             List<Object> values = pack.info.loadRecord(record);
-//            log.info(values.toString());
             boolean flag = true;
             for (Function function : functionList) {
                 flag = flag && function.consume(values);
@@ -432,7 +430,6 @@ public class DatabaseController {
             InfoAndHandler pack = getTableInfo(tableName);
             List<String> stringList = new ArrayList<>();
             valueList.forEach(obj -> stringList.add(obj.toString()));
-//            log.info("string list size: {}", stringList.size());
             byte[] data = pack.info.buildRecord(stringList);
             FileHandler fileHandler = recordManager.openFile(getTablePath(tableName));
             Record rid = fileHandler.insertRecord(data);
@@ -442,13 +439,50 @@ public class DatabaseController {
     }
 
 
+//    public void loadData(String csvName, String tableName) {
+//        try {
+//            this.createTable();
+//            InfoAndHandler pack = getTableInfo(tableName);
+//            List<String> stringList = new ArrayList<>();
+//            byte[] data = pack.info.buildRecord(stringList);
+//            FileHandler fileHandler = recordManager.openFile(getTablePath(tableName));
+//            Record rid = fileHandler.insertRecord(data);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//    }
 
-    public ResultItem selectRecord(List<Selector> selectors, List<String> tableNames, List<WhereClause> clauses, SQLTreeVisitor.Column group) { //FIXME: NO GROUP BY support
+
+    public ResultItem storeData(String csvName, String tableName) {
         if (currentUsingDatabase == null)
             throw new RuntimeException("No database is being used!");
         MetaHandler metaHandler = metaManager.openMeta(currentUsingDatabase);
-        Map<String,List<String>> columnToTable = metaHandler.buildTable(tableNames);
-        clauses.forEach(clause -> {
+        TableInfo tableInfo = metaHandler.getTable(tableName);
+        FileHandler fileHandler = recordManager.openFile(getTablePath(tableName));
+        FileScanner fileScanner = new FileScanner(fileHandler);
+        List<NameAndTypePack> list = tableInfo.getPack();
+        String[] headers = Csv.processHeader(list);
+        csvName = csvName.replace("\'", "");
+        Csv.createCsv("", csvName, headers, null, false);
+        for (Record record : fileScanner) {
+            try {
+                List<Object> data = tableInfo.loadRecord(record);
+                Csv.createCsv("", csvName, headers, data, true);
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            }
+        }
+        return new OperationResult("dump", 1);
+    }
+
+    public ResultItem selectRecord(List<Selector> selectors, List<String> tableNames, List<WhereClause> clauses, SQLTreeVisitor.Column group) {
+        if (currentUsingDatabase == null)
+            throw new RuntimeException("No database is being used!");
+
+        MetaHandler metaHandler = metaManager.openMeta(currentUsingDatabase);
+        Map<String, List<String>> columnToTable = metaHandler.buildTable(tableNames);
+        clauses.forEach(clause ->
+        {
             String table = clause.getTableName();
             String column = clause.getColumnName();
             if (table == null) {
@@ -470,7 +504,9 @@ public class DatabaseController {
                 clause.setTargetTable(tables.get(0));
             }
         });
-        selectors.forEach(selector -> {
+        selectors.forEach(selector ->
+
+        {
             String table = selector.getTableName();
             String column = selector.getColumnName();
             if (table == null) {
@@ -483,7 +519,7 @@ public class DatabaseController {
             }
         });
 
-        if(group != null && group.tableName == null)
+        if (group != null && group.tableName == null)
             group.tableName = tableNames.get(0);
 
         String groupBy = group == null ? null : group.tableName + "." + group.columnName;
@@ -491,35 +527,40 @@ public class DatabaseController {
         Set<Selector.SelectorType> types = new HashSet<>();
         selectors.forEach(selector -> types.add(selector.getType()));
         if (group == null && types.size() > 1 && types.contains(Selector.SelectorType.FIELD))
-            throw new RuntimeException("No group specified, can't resolve both aggregation and field");
+            throw new
+
+                    RuntimeException("No group specified, can't resolve both aggregation and field");
+
         Map<String, TableResult> resultMap = new HashMap<>();
-        for (String tableName : tableNames) {
+        for (
+                String tableName : tableNames) {
             try {
                 resultMap.put(tableName, scanIndices(tableName, clauses));
             } catch (UnsupportedEncodingException e) {
                 return new MessageResult(e.getMessage(), true);
             }
         }
+
         //FIXME: deal with join later on.
         TableResult result = resultMap.get(tableNames.get(0));
         List<String> headers;
         List<List<Object>> actualData = new ArrayList<>();
-        if(group != null) {
+        if (group != null) {
             int index = result.getHeaderIndex(groupBy);
             Map<Object, List<List<Object>>> groups = new HashMap<>();
-            for(List<Object> row : result.getData()) {
+            for (List<Object> row : result.getData()) {
                 Object id = row.get(index);
                 List<List<Object>> rowList = groups.computeIfAbsent(id, k -> new ArrayList<>());
                 rowList.add(row);
             }
-            if(selectors.get(0).getType() == Selector.SelectorType.ALL) {
+            if (selectors.get(0).getType() == Selector.SelectorType.ALL) {
                 assert selectors.size() == 1;
                 groups.values().forEach(grp -> actualData.add(grp.get(0)));
                 return new TableResult(result.getHeaders(), actualData);
             }
-            for(List<List<Object>> grp : groups.values()) {
+            for (List<List<Object>> grp : groups.values()) {
                 Map<String, List<Object>> categorizedGroup = new HashMap<>();
-                for(int i=0;i<result.getHeaders().size();i++) {
+                for (int i = 0; i < result.getHeaders().size(); i++) {
                     List<Object> objectList = new ArrayList<>();
                     for (List<Object> record : grp) {
                         objectList.add(record.get(i));
@@ -548,14 +589,14 @@ public class DatabaseController {
                     actualData.add(data1);
                 });
             } else {
-                if(result.getData() == null) {
+                if (result.getData() == null) {
                     List<Object> data1 = new ArrayList<>();
-                    for(int i=0;i<result.getHeaders().size();i++)
+                    for (int i = 0; i < result.getHeaders().size(); i++)
                         data1.add(null);
                     actualData.add(data1);
                 } else {
                     Map<String, List<Object>> valueMap = new HashMap<>();
-                    for(int i=0;i<result.getHeaders().size();i++) {
+                    for (int i = 0; i < result.getHeaders().size(); i++) {
                         List<Object> objectList = new ArrayList<>();
                         for (List<Object> data1 : result.getData()) {
                             objectList.add(data1.get(i));
@@ -576,7 +617,9 @@ public class DatabaseController {
         return new TableResult(headers, actualData);
     }
 
-    public ResultItem selectWithLimit(List<Selector> selectors, List<String> tableNames, List<WhereClause> conditions, int limit, int offset, SQLTreeVisitor.Column group) {
+    public ResultItem selectWithLimit
+            (List<Selector> selectors, List<String> tableNames, List<WhereClause> conditions, int limit,
+             int offset, SQLTreeVisitor.Column group) {
         ResultItem result = selectRecord(selectors, tableNames, conditions, group);
         if (!(result instanceof TableResult))
             return result;
