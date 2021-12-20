@@ -38,7 +38,6 @@ public class Main {
     }
 
     public static void main(String[] args) {
-
         MetaManager metaManager = new MetaManager();
 
 
@@ -65,14 +64,19 @@ public class Main {
         printResults(e);
         e = controller.execute("CREATE TABLE scholars ( studentid INT, awardname VARCHAR(32) NOT NULL, awardtime INT);");
         printResults(e);
+        e = controller.execute("INSERT INTO scholars VALUES (1, '123', 4);");
+        printResults(e);
         e = controller.execute("DESC scholars;");
+        printResults(e);
+        e = controller.execute("SELECT * FROM scholars;");
         printResults(e);
         e = controller.execute("SHOW TABLES;");
         printResults(e);
-        e = controller.execute("INSERT INTO scholars VALUES (1, '123', 4);");
-        printResults(e);
-        e = controller.execute("SELECT awardtime FROM scholars WHERE awardtime IN (SELECT awardtime FROM scholars);");
-        printResults(e);
+        e = controller.execute("DUMP TO FILE \'scholars\' FROM TABLE scholars;");
+//        printResults(e);
+
+//        e = controller.execute("SELECT awardtime FROM scholars WHERE awardtime IN (SELECT awardtime FROM scholars);");
+//        printResults(e);
 //        e = controller.execute("DROP TABLE scholars;");
 //        printResults(e);
 //        e = controller.execute("SHOW TABLES;");

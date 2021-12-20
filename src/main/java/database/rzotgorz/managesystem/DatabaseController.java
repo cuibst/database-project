@@ -12,6 +12,7 @@ import database.rzotgorz.recordsystem.FileHandler;
 import database.rzotgorz.recordsystem.RID;
 import database.rzotgorz.recordsystem.Record;
 import database.rzotgorz.recordsystem.RecordManager;
+import database.rzotgorz.utils.Csv;
 import database.rzotgorz.utils.FileScanner;
 import lombok.extern.slf4j.Slf4j;
 import org.antlr.v4.runtime.Parser;
@@ -365,8 +366,7 @@ public class DatabaseController {
                 ArrayList<RID> res = index.range(entry.getValue().lower, entry.getValue().upper);
                 log.info(String.valueOf(res == null));
                 (result = new HashSet<>()).addAll(Set.copyOf(index.range(entry.getValue().lower, entry.getValue().upper)));
-            }
-            else
+            } else
                 result.retainAll(index.range(entry.getValue().lower, entry.getValue().upper));
         }
         return result;
@@ -394,13 +394,11 @@ public class DatabaseController {
             remainingRIDs.forEach(rid -> recordList.add(handler.getRecord(rid)));
             recordIterable = recordList;
         } else {
-//            log.info("Scan through FileScanner");
             recordIterable = new FileScanner(handler);
         }
         RecordDataPack recordDataPack = new RecordDataPack(new ArrayList<>(), new ArrayList<>());
         for (Record record : recordIterable) {
             List<Object> values = pack.info.loadRecord(record);
-//            log.info(values.toString());
             boolean flag = true;
             for (Function function : functionList) {
                 flag = flag && function.consume(values);
@@ -432,7 +430,6 @@ public class DatabaseController {
             InfoAndHandler pack = getTableInfo(tableName);
             List<String> stringList = new ArrayList<>();
             valueList.forEach(obj -> stringList.add(obj.toString()));
-//            log.info("string list size: {}", stringList.size());
             byte[] data = pack.info.buildRecord(stringList);
             FileHandler fileHandler = recordManager.openFile(getTablePath(tableName));
             Record rid = fileHandler.insertRecord(data);
@@ -441,11 +438,47 @@ public class DatabaseController {
         }
     }
 
+//    public void loadData(String csvName, String tableName) {
+//        try {
+//            this.createTable();
+//            InfoAndHandler pack = getTableInfo(tableName);
+//            List<String> stringList = new ArrayList<>();
+//            byte[] data = pack.info.buildRecord(stringList);
+//            FileHandler fileHandler = recordManager.openFile(getTablePath(tableName));
+//            Record rid = fileHandler.insertRecord(data);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//    }
+
+
+    public ResultItem storeData(String csvName, String tableName) {
+        if (currentUsingDatabase == null)
+            throw new RuntimeException("No database is being used!");
+        MetaHandler metaHandler = metaManager.openMeta(currentUsingDatabase);
+        TableInfo tableInfo = metaHandler.getTable(tableName);
+        FileHandler fileHandler = recordManager.openFile(getTablePath(tableName));
+        FileScanner fileScanner = new FileScanner(fileHandler);
+        List<NameAndTypePack> list = tableInfo.getPack();
+        String[] headers = Csv.processHeader(list);
+        csvName = csvName.replace("\'", "");
+        Csv.createCsv("", csvName, headers, null, false);
+        for (Record record : fileScanner) {
+            try {
+                List<Object> data = tableInfo.loadRecord(record);
+                Csv.createCsv("", csvName, headers, data, true);
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            }
+        }
+        return new OperationResult("dump", 1);
+    }
+
     public ResultItem selectRecord(List<Selector> selectors, List<String> tableNames, List<WhereClause> clauses) { //FIXME: NO GROUP BY support
         if (currentUsingDatabase == null)
             throw new RuntimeException("No database is being used!");
         MetaHandler metaHandler = metaManager.openMeta(currentUsingDatabase);
-        Map<String,List<String>> columnToTable = metaHandler.buildTable(tableNames);
+        Map<String, List<String>> columnToTable = metaHandler.buildTable(tableNames);
         clauses.forEach(clause -> {
             String table = clause.getTableName();
             String column = clause.getColumnName();
@@ -509,7 +542,7 @@ public class DatabaseController {
             result.getData().forEach(data -> {
                 List<Object> data1 = new ArrayList<>();
                 indices.forEach(id -> {
-                    data1.add(data.get(id)) ;
+                    data1.add(data.get(id));
                 });
                 actualData.add(data1);
             });
@@ -517,7 +550,7 @@ public class DatabaseController {
             //FIXME: aggregators;
             return result;
         }
-        if(tableNames.size() <= 1) {
+        if (tableNames.size() <= 1) {
             headers = new ArrayList<>();
             for (Selector selector : selectors) {
                 headers.add(selector.getColumnName());

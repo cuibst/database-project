@@ -1,7 +1,5 @@
 package database.rzotgorz.metaSystem;
 
-import com.alibaba.fastjson.JSONObject;
-import database.rzotgorz.Main;
 import database.rzotgorz.managesystem.SQLTreeVisitor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -23,9 +21,9 @@ public class MetaHandler {
         this.dbName = dbName;
         this.location = "." + File.separator + "data" + File.separator + dbName + File.separator;
         File file = new File(this.location + this.dbName + ".meta");
-        if (file.exists())
+        if (file.exists()) {
             this.load();
-        else {
+        } else {
             this.dbInfo = new DbInfo(this.dbName, new ArrayList<>());
             this.dump();
         }
@@ -35,8 +33,10 @@ public class MetaHandler {
         try {
             ObjectInputStream ois = new ObjectInputStream(
                     new BufferedInputStream(new FileInputStream(this.location + this.dbName + ".meta")));
+            log.info(this.location + this.dbName + ".meta");
             this.dbInfo = (DbInfo) ois.readObject();
             ois.close();
+            log.info(this.dbInfo.toString());
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }
@@ -86,9 +86,10 @@ public class MetaHandler {
     }
 
     public TableInfo getTable(String tbName) {
+        if (this.dbInfo == null)
+            log.info("dbinfo is null");
         if (!this.dbInfo.getTbMap().containsKey(tbName))
             throw new RuntimeException(String.format("Can not find table named: %s", tbName));
-//        log.info(String.valueOf(this.dbInfo.getTbMap().get(tbName).getTotalSize()));
         return this.dbInfo.getTbMap().get(tbName);
     }
 
@@ -163,10 +164,10 @@ public class MetaHandler {
         Map<String, List<String>> tableMap = new HashMap<>();
         for (String tableName : tableNames) {
             TableInfo tableInfo = this.getTable(tableName);
-            for(ColumnInfo column : tableInfo.getColumns().values()) {
+            for (ColumnInfo column : tableInfo.getColumns().values()) {
                 String name = column.getName();
                 List<String> list = tableMap.get(name);
-                if(list == null)
+                if (list == null)
                     list = new ArrayList<>();
                 list.add(tableName);
                 tableMap.put(name, list);

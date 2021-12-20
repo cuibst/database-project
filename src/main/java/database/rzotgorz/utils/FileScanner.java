@@ -26,11 +26,6 @@ public class FileScanner implements Iterable<Record> {
                     continue;
                 byte[] bitmap = fileHandler.getBitmap(page);
                 slotId++;
-//                System.out.println("-------");
-//                for (int i = 0; i < bitmap.length; i++) {
-//                    System.out.println(bitmap[i]);
-//                }
-
                 for (; slotId < bitmap.length; slotId++)
                     if ((bitmap[slotId / 8] & (1 << (slotId & 7))) > 0)
                         break OUT;

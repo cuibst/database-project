@@ -47,7 +47,6 @@ public class IndexHandler {
         byte b = 0;
         Arrays.fill(data, b);
         int pageId = fileManager.createPage(this.fileId, data);
-//        log.info("pageId:{} ", pageId);
         return pageId;
     }
 

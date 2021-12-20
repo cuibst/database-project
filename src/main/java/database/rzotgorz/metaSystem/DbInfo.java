@@ -1,6 +1,5 @@
 package database.rzotgorz.metaSystem;
 
-import com.alibaba.fastjson.JSONObject;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
@@ -29,8 +28,6 @@ public class DbInfo implements Serializable {
     public DbInfo(String name, ArrayList<TableInfo> tableInfos) {
         this.name = name;
         this.tbMap = new HashMap<>();
-//        if (this.tbMap == null)
-//            log.info("yes");
         for (int i = 0; i < tableInfos.size(); i++) {
             this.tbMap.put(tableInfos.get(i).getName(), tableInfos.get(i));
         }
