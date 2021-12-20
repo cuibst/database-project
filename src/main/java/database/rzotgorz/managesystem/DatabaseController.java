@@ -46,6 +46,10 @@ public class DatabaseController {
         return databases;
     }
 
+    public String getCurrentUsingDatabase() {
+        return currentUsingDatabase;
+    }
+
     public DatabaseController(SQLTreeVisitor visitor) throws NotDirectoryException {
         recordManager = new RecordManager();
         indexManager = new IndexManager(recordManager.getFileManager());

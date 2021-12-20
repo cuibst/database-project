@@ -11,7 +11,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
+import org.jline.reader.LineReader;
+import org.jline.reader.LineReaderBuilder;
+import org.jline.terminal.Terminal;
+import org.jline.terminal.TerminalBuilder;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.NotDirectoryException;
 import java.util.ArrayList;
@@ -37,8 +42,9 @@ public class Main {
         }
     }
 
-    public static void main(String[] args) {
-        MetaManager metaManager = new MetaManager();
+    public static void main(String[] args) throws IOException {
+
+//        MetaManager metaManager = new MetaManager();
 
 
         SQLTreeVisitor visitor = new SQLTreeVisitor();
@@ -49,43 +55,59 @@ public class Main {
             log.error(e.getMessage());
             return;
         }
-//
-        Object e = controller.execute("CREATE DATABASE test;");
-        printResults(e);
-        e = controller.execute("CREATE DATABASE hello_world;");
-        printResults(e);
-        e = controller.execute("SHOW DATABASES;");
-        printResults(e);
-        e = controller.execute("SHOW TABLES;");
-        printResults(e);
-        e = controller.execute("USE test;");
-        printResults(e);
-        e = controller.execute("SHOW TABLES;");
-        printResults(e);
-        e = controller.execute("CREATE TABLE scholars ( studentid INT, awardname VARCHAR(32) NOT NULL, awardtime INT);");
-        printResults(e);
-        e = controller.execute("INSERT INTO scholars VALUES (1, '123', 4);");
-        printResults(e);
-        e = controller.execute("DESC scholars;");
-        printResults(e);
-        e = controller.execute("SELECT * FROM scholars;");
-        printResults(e);
-        e = controller.execute("INSERT INTO scholars VALUES (2, '123', 4);");
-        printResults(e);
-        e = controller.execute("INSERT INTO scholars VALUES (3, '123', 4);");
-        printResults(e);
-        e = controller.execute("INSERT INTO scholars VALUES (1, '1234', 4);");
-        printResults(e);
-        e = controller.execute("INSERT INTO scholars VALUES (2, '1234', 4);");
-        printResults(e);
-        e = controller.execute("INSERT INTO scholars VALUES (4, '1234', 4);");
-        printResults(e);
-        e = controller.execute("SELECT MAX(studentid), awardname FROM scholars GROUP BY awardname;");
-        printResults(e);
-        e = controller.execute("DUMP TO FILE \'scholars\' FROM TABLE scholars;");
-//        printResults(e);
 
-//        e = controller.execute("SELECT awardtime FROM scholars WHERE awardtime IN (SELECT awardtime FROM scholars);");
+        Terminal terminal = TerminalBuilder.builder().system(true).build();
+        LineReader lineReader = LineReaderBuilder.builder().terminal(terminal).build();
+        StringBuilder line = new StringBuilder();
+        while (true) {
+            String prompt = controller.getCurrentUsingDatabase() == null ? "llhdb> " : String.format("llhdb(%s)> ", controller.getCurrentUsingDatabase());
+            if(!line.toString().equals(""))
+                prompt = " ".repeat(prompt.length()-3) + "-> ";
+            String currentLine = lineReader.readLine(prompt);
+            line.append(currentLine);
+            if(line.toString().equals("exit")) {
+                System.out.println("bye!");
+                break;
+            }
+            if(currentLine.endsWith(";")) {
+                Object e = controller.execute(line.toString());
+                printResults(e);
+                line = new StringBuilder();
+            }
+        }
+        controller.shutdown();
+
+//        Object e = controller.execute("CREATE DATABASE test;");
+//        printResults(e);
+//        e = controller.execute("CREATE DATABASE hello_world;");
+//        printResults(e);
+//        e = controller.execute("SHOW DATABASES;");
+//        printResults(e);
+//        e = controller.execute("SHOW TABLES;");
+//        printResults(e);
+//        e = controller.execute("USE test;");
+//        printResults(e);
+//        e = controller.execute("SHOW TABLES;");
+//        printResults(e);
+//        e = controller.execute("CREATE TABLE scholars ( studentid INT, awardname VARCHAR(32) NOT NULL, awardtime INT);");
+//        printResults(e);
+//        e = controller.execute("DESC scholars;");
+//        printResults(e);
+//        e = controller.execute("SHOW TABLES;");
+//        printResults(e);
+//        e = controller.execute("INSERT INTO scholars VALUES (1, '123', 4);");
+//        printResults(e);
+//        e = controller.execute("INSERT INTO scholars VALUES (2, '123', 4);");
+//        printResults(e);
+//        e = controller.execute("INSERT INTO scholars VALUES (3, '123', 4);");
+//        printResults(e);
+//        e = controller.execute("INSERT INTO scholars VALUES (1, '1234', 4);");
+//        printResults(e);
+//        e = controller.execute("INSERT INTO scholars VALUES (2, '1234', 4);");
+//        printResults(e);
+//        e = controller.execute("INSERT INTO scholars VALUES (4, '1234', 4);");
+//        printResults(e);
+//        e = controller.execute("SELECT SUM(studentid), awardname FROM scholars GROUP BY awardname;");
 //        printResults(e);
 //        e = controller.execute("DROP TABLE scholars;");
 //        printResults(e);
@@ -95,8 +117,6 @@ public class Main {
 //        printResults(e);
 //        e = controller.execute("SHOW DATABASES;");
 //        printResults(e);
-
-        controller.shutdown();
 
 //        ArrayList<String> list = new ArrayList<>();
 //        list.add("1");
@@ -227,7 +247,7 @@ public class Main {
                     System.out.println(resultItem);
                     System.out.println("Result received in " + resultItem.cost + "ms.");
                 }
-                System.out.println("=".repeat(30));
+//                System.out.println("=".repeat(30));
             }
         }
     }
