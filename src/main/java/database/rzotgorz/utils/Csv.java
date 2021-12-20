@@ -2,6 +2,7 @@ package database.rzotgorz.utils;
 
 import com.csvreader.CsvReader;
 import com.csvreader.CsvWriter;
+import database.rzotgorz.metaSystem.ColumnInfo;
 import database.rzotgorz.metaSystem.NameAndTypePack;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -9,11 +10,37 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.*;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Data
 @Slf4j
 public class Csv {
+
+    public static Map<String, ColumnInfo> parserHeader(String csvName) {
+        Map<String, ColumnInfo> map = new HashMap<>();
+        String[] headers;
+        try {
+            CsvReader reader = new CsvReader(csvName, ',', Charset.forName("UTF-8"));
+            reader.readHeaders();
+            headers = reader.getHeaders();
+            for (int i = 0; i < headers.length; i++) {
+                String header = headers[i].replace(")", "");
+                String[] contents = header.split("\\(");
+                ColumnInfo columnInfo = new ColumnInfo(contents[1], contents[0], 0, null);
+                if (header.contains("VARCHAR")) {
+                    columnInfo.setSize(Integer.parseInt(contents[2]));
+                }
+                map.put(columnInfo.getName(), columnInfo);
+            }
+            reader.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return map;
+    }
+
     public static String[] processHeader(List<NameAndTypePack> list) {
         String[] headers = new String[list.size()];
         for (int i = 0; i < list.size(); i++) {
@@ -27,14 +54,39 @@ public class Csv {
         return headers;
     }
 
-    public static List<String[]> readCsv(String path, String name) {
-        List<String[]> list = new ArrayList<>();
+    public static List<Object[]> readCsv(String path, String name) {
+        List<Object[]> list = new ArrayList<>();
+        String[] headers;
         try {
             CsvReader reader = new CsvReader(name, ',', Charset.forName("UTF-8"));
             reader.readHeaders();
-            while (reader.readRecord()) {
-                list.add(reader.getValues());
+            headers = reader.getHeaders();
+            String[] types = new String[headers.length];
+            for (int i = 0; i < headers.length; i++) {
+                String header = headers[i].replace(")", "");
+                String[] contents = header.split("\\(");
+                ColumnInfo columnInfo = new ColumnInfo(contents[1], contents[0], 0, null);
+                if (header.contains("VARCHAR")) {
+                    columnInfo.setSize(Integer.parseInt(contents[2]));
+                }
+                types[i] = contents[1];
             }
+            while (reader.readRecord()) {
+                String[] values = reader.getValues();
+                Object[] objects = new Object[values.length];
+                for (int i = 0; i < values.length; i++) {
+                    if (types[i].equals("INT")) {
+                        objects[i] = Integer.parseInt(values[i]);
+                    } else if (types[i].equals("FLOAT")) {
+                        objects[i] = Float.parseFloat(values[i]);
+                    } else if (types[i].equals("DATE")) {
+                        objects[i] = Long.parseLong(values[i]);
+                    } else
+                        objects[i] = values[i];
+                }
+                list.add(objects);
+            }
+            reader.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -43,6 +95,7 @@ public class Csv {
 
     public static void createCsv(String path, String name, String[] headers, List<Object> data, Boolean created) {
         try {
+            name = "." + File.separator + "csv" + File.separator + name;
             File file = new File(name);
             if (!created) {
                 if (file.exists())

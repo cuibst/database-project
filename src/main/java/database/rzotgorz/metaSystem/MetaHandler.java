@@ -33,10 +33,8 @@ public class MetaHandler {
         try {
             ObjectInputStream ois = new ObjectInputStream(
                     new BufferedInputStream(new FileInputStream(this.location + this.dbName + ".meta")));
-            log.info(this.location + this.dbName + ".meta");
             this.dbInfo = (DbInfo) ois.readObject();
             ois.close();
-            log.info(this.dbInfo.toString());
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }

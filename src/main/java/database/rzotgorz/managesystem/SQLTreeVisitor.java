@@ -229,6 +229,11 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     }
 
     @Override
+    public Object visitLoad_data(SQLParser.Load_dataContext ctx) {
+        return controller.loadData(ctx.String().getText() + ".csv", ctx.Identifier().getText());
+    }
+
+    @Override
     public Object visitDump_data(SQLParser.Dump_dataContext ctx) {
         return controller.storeData(ctx.String().getText() + ".csv", ctx.Identifier().getText());
     }
