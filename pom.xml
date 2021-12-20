@@ -75,6 +75,13 @@
             <version>3.21.0</version>
         </dependency>
 
+        <!-- https://mvnrepository.com/artifact/org.jline/jline-terminal-jansi -->
+        <dependency>
+            <groupId>org.jline</groupId>
+            <artifactId>jline-terminal-jansi</artifactId>
+            <version>3.21.0</version>
+        </dependency>
+
 
     </dependencies>
 
