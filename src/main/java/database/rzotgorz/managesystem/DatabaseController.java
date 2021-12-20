@@ -443,18 +443,24 @@ public class DatabaseController {
     }
 
 
-//    public void loadData(String csvName, String tableName) {
-//        try {
-//            this.createTable();
-//            InfoAndHandler pack = getTableInfo(tableName);
-//            List<String> stringList = new ArrayList<>();
-//            byte[] data = pack.info.buildRecord(stringList);
-//            FileHandler fileHandler = recordManager.openFile(getTablePath(tableName));
-//            Record rid = fileHandler.insertRecord(data);
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-//    }
+    public ResultItem loadData(String csvName, String tableName) {
+        try {
+            csvName = csvName.replace("\'", "");
+            csvName = "." + File.separator + "csv" + File.separator + csvName;
+            this.createTable(new TableInfo(tableName, Csv.parserHeader(csvName)));
+            List<Object[]> objects = Csv.readCsv("", csvName);
+            for (int i = 0; i < objects.size(); i++) {
+                List<Object> objectList = new ArrayList<>();
+                for (int j = 0; j < objects.get(i).length; j++) {
+                    objectList.add(objects.get(i)[j]);
+                }
+                this.insertRecord(tableName, objectList);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return new OperationResult("load", 1);
+    }
 
 
     public ResultItem storeData(String csvName, String tableName) {

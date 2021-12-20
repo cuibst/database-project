@@ -14,7 +14,6 @@ public class TableResult extends ResultItem {
     private final PrettyTable prettyTable;
 
     public TableResult(List<String> header, Iterable<List<Object>> data) {
-//        log.info(header.toString());
         prettyTable = new PrettyTable(header);
         data.forEach(list -> {
             List<String> strings = new ArrayList<>();
