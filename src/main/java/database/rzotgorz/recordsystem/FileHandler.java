@@ -221,7 +221,7 @@ public class FileHandler {
         return newData;
     }
 
-    public void deletePage(RID rid) {
+    public void deleteRecord(RID rid) {
         int slotId = rid.getSlotId();
         int pageId = rid.getPageId();
         byte[] page = fm.getPageData(fileId, pageId);

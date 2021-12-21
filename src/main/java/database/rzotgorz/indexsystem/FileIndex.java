@@ -95,14 +95,6 @@ public class FileIndex {
             long maxKey = Integer.parseInt(object.get("maxKey").toString());
             root.childKeys.add(minKey);
             root.childKeys.add(maxKey);
-//            log.info("maxKey:{},minKey:{}", maxKey, minKey);
-//            System.out.println(newKeys);
-//            System.out.println(rootNode.getChildKeys());
-//            System.out.println(root.childKeys);
-//            if (root.childNodes == null)
-//                log.info("in here");
-//            if (((InterNode) rootNode).childNodes == null)
-//                log.info("in here");
             root.addChildNodes(this.rootNode);
             root.addChildNodes(node);
             this.rootNode = root;

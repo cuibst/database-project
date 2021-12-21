@@ -27,7 +27,6 @@ import java.io.UnsupportedEncodingException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.NotDirectoryException;
 import java.util.*;
-import java.util.function.BiConsumer;
 
 @Slf4j
 public class DatabaseController {
@@ -441,10 +440,63 @@ public class DatabaseController {
         }
     }
 
+    public ResultItem updateRecord(String tableName, List<SetClause> setClauses, List<WhereClause> whereClauses) {
+        int length = 0;
+        try {
+            InfoAndHandler pack = getTableInfo(tableName);
+            RecordDataPack dataPack = searchIndices(tableName, whereClauses);
+            length = dataPack.records.size();
+            FileHandler handler = this.recordManager.openFile(getTablePath(tableName));
+            dataPack.records.forEach(record -> {
+                try {
+                    List<Object> values = pack.info.loadRecord(record);
+                    List<String> headers = pack.info.getHeader();
+                    setClauses.forEach(clause -> {
+                        for (int i = 0; i < headers.size(); i++) {
+                            String name = tableName + "." + headers.get(i);
+                            log.info("name :{} , askedName:{} ", name, clause.getColumnName());
+                            if (name.equals(clause.getColumnName())) {
+                                values.set(i, clause.getValue());
+                            }
+                        }
+                    });
+                    handler.deleteRecord(record.getRid());
+                    insertRecord(tableName, values);
+                } catch (UnsupportedEncodingException e) {
+                    e.printStackTrace();
+                }
+            });
+
+            dataPack.records.forEach(record -> {
+                handler.deleteRecord(record.getRid());
+            });
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return new OperationResult("Update", length);
+    }
+
+
+    public ResultItem deleteRecord(String tableName, List<WhereClause> whereClauses) {
+        int length = 0;
+        try {
+            RecordDataPack data = searchIndices(tableName, whereClauses);
+            length = data.records.size();
+            FileHandler handler = this.recordManager.openFile(getTablePath(tableName));
+            log.info(String.valueOf(data.records.size()));
+            data.records.forEach(record -> {
+                RID rid = record.getRid();
+                handler.deleteRecord(rid);
+            });
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+        return new OperationResult("Delete", length);
+    }
 
     public ResultItem loadData(String csvName, String tableName) {
         try {
-            csvName = csvName.replace("\'", "");
+            csvName = csvName.replace("'", "");
             csvName = "." + File.separator + "csv" + File.separator + csvName;
             this.createTable(new TableInfo(tableName, Csv.parserHeader(csvName)));
             List<Object[]> objects = Csv.readCsv("", csvName);
@@ -636,7 +688,6 @@ public class DatabaseController {
             data = data.subList(offset, offset + limit);
         return new TableResult(((TableResult) result).getHeaders(), data);
     }
-
 
     public void shutdown() {
         metaManager.shutdown();

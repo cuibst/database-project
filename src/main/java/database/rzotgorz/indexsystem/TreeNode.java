@@ -32,8 +32,6 @@ public class TreeNode {
     }
 
     public int lowerBound(long key) {
-//        log.info("key: {}", key);
-//        System.out.println(childKeys);
         if (childKeys.size() == 0)
             return -1;
         int head = 0;
@@ -48,7 +46,6 @@ public class TreeNode {
         }
         if (childKeys.get(head) >= key)
             pos = head;
-//        log.info("pos :{}", pos);
         return pos;
     }
 

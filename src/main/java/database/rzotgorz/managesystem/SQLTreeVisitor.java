@@ -12,7 +12,10 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 
 import java.io.FileNotFoundException;
 import java.nio.file.FileAlreadyExistsException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 @Slf4j
 public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
@@ -253,6 +256,21 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     }
 
     @Override
+    public ResultItem visitUpdate_table(SQLParser.Update_tableContext ctx) {
+        String tableName = ctx.Identifier().getText();
+        List<SetClause> setClauses = (ctx.set_clause() == null) ? new ArrayList<>() : (List<SetClause>) ctx.set_clause().accept(this);
+        List<WhereClause> whereClauses = (ctx.where_and_clause() == null) ? new ArrayList<>() : (List<WhereClause>) ctx.where_and_clause().accept(this);
+        return new OperationResult("Update", 0);
+    }
+
+    @Override
+    public ResultItem visitDelete_from_table(SQLParser.Delete_from_tableContext ctx) {
+        String tableName = ctx.Identifier().getText();
+        List<WhereClause> whereClauses = (ctx.where_and_clause() == null) ? new ArrayList<>() : (List<WhereClause>) ctx.where_and_clause().accept(this);
+        return controller.deleteRecord(tableName, whereClauses);
+    }
+
+    @Override
     public List<Object> visitValue_lists(SQLParser.Value_listsContext ctx) {
         List<Object> result = new ArrayList<>();
         for (SQLParser.Value_listContext list : ctx.value_list())
@@ -323,6 +341,15 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     public List<WhereClause> visitWhere_and_clause(SQLParser.Where_and_clauseContext ctx) {
         List<WhereClause> result = new ArrayList<>();
         ctx.where_clause().forEach(where_clauseContext -> result.add((WhereClause) where_clauseContext.accept(this)));
+        return result;
+    }
+
+    @Override
+    public List<SetClause> visitSet_clause(SQLParser.Set_clauseContext ctx) {
+        List<SetClause> result = new ArrayList<>();
+        for (int i = 0; i < ctx.value().size(); i++) {
+            result.add(new SetClause(ctx.Identifier(i).toString(), ctx.value(i).toString()));
+        }
         return result;
     }
 

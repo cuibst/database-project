@@ -14,7 +14,7 @@ import java.util.Map;
 @Slf4j
 public class IndexManager {
     private FileManager fileManager;
-//    private String dbName;
+    //    private String dbName;
     private Map<String, IndexHandler> openedIndexHandlers;
     private Map<JSONObject, FileIndex> openedFileIndex;
 
@@ -35,7 +35,6 @@ public class IndexManager {
         if (openedIndexHandlers.containsKey(dbName)) {
             return openedIndexHandlers.get(dbName);
         } else {
-//            log.info("in getHandler");
             IndexHandler handler = new IndexHandler(fileManager, dbName);
             openedIndexHandlers.put(dbName, handler);
             return handler;
