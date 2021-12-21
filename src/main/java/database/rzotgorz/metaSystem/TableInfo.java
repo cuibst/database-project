@@ -14,6 +14,7 @@ import java.util.*;
 public class TableInfo implements Serializable {
     private String name;
     private LinkedHashMap<String, ColumnInfo> columns;
+    private Map<String, Integer> indicesMap;
     private List<String> primary;
     private Map<String, SQLTreeVisitor.ForeignKey> foreign;
     private List<String> index;
@@ -34,6 +35,7 @@ public class TableInfo implements Serializable {
         this.index = new ArrayList<>();
         this.unique = new HashMap<>();
         this.colIndex = new HashMap<>();
+        this.indicesMap = new HashMap<>();
         this.updateParams();
     }
 
@@ -147,14 +149,14 @@ public class TableInfo implements Serializable {
 
 
     public boolean existsIndex(String name) {
-        return this.index.contains(name);
+        return this.indicesMap.containsKey(name);
     }
 
     public void createIndex(String name, int rootId) {
-        this.colIndex.put(name, rootId);
+        this.indicesMap.put(name, rootId);
     }
 
     public void removeIndex(String name) {
-        this.colIndex.remove(name);
+        this.indicesMap.remove(name);
     }
 }

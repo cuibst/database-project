@@ -155,7 +155,7 @@ public class Main {
                 System.out.println("bye!");
                 break;
             }
-            if (currentLine.endsWith(";")) {
+            if (currentLine.stripTrailing().endsWith(";")) {
                 Object e = controller.execute(line.toString());
                 printResults(e);
                 line = new StringBuilder();

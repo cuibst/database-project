@@ -247,8 +247,13 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     public ResultItem visitInsert_into_table(SQLParser.Insert_into_tableContext ctx) {
         String tableName = ctx.getChild(2).getText();
         List<Object> valueLists = (List<Object>) ctx.value_lists().accept(this);
-        for (Object valueList : valueLists)
-            controller.insertRecord(tableName, (List<Object>) valueList);
+        for (Object valueList : valueLists) {
+            try {
+                controller.insertRecord(tableName, (List<Object>) valueList);
+            } catch (Exception e) {
+                return new MessageResult(e.getMessage(), true);
+            }
+        }
         return new OperationResult("inserted", valueLists.size());
     }
 

@@ -1,7 +1,6 @@
 package database.rzotgorz.managesystem;
 
 import java.util.List;
-import java.util.function.Consumer;
 
 public class Selector {
 
