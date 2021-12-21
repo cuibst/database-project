@@ -26,11 +26,12 @@ public class IndexHandler {
         this.dbName = dbName;
         this.fileManager = fm;
         this.modified = true;
-        File file = new File("." + File.separator + "data" + File.separator + dbName + ".index");
+        String path = "." + File.separator + "data" + File.separator + dbName + File.separator + dbName + ".index";
+        File file = new File(path);
         if (!file.exists())
-            this.fileId = fm.createFile(dbName + ".index");
+            this.fileId = fm.createFile(path);
         else
-            this.fileId = fm.openFile(dbName + ".index");
+            this.fileId = fm.openFile(path);
     }
 
     public byte[] getPage(int pageId) {
