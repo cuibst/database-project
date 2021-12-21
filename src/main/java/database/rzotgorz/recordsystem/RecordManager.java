@@ -103,6 +103,7 @@ public class RecordManager {
     }
 
     public void deleteFile(String filename) {
+        closeFile(filename);
         File file = new File(filename);
         try {
             file.delete();
@@ -128,7 +129,6 @@ public class RecordManager {
             return;
         if (handler.getModifyHeader()) {
             JSONObject newHeader = handler.getFileHeader();
-//            log.info("File {} has header {}", filename, newHeader);
             byte[] headerBytes = changeJSONObjectToBytes(newHeader);
             byte[] page = new byte[PAGE_SIZE];
             System.arraycopy(headerBytes, 0, page, 0, headerBytes.length);
