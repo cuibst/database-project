@@ -172,7 +172,6 @@ public class InterNode extends TreeNode {
             upper++;
         if (lower != 0)
             lower--;
-        log.info("lower:{},upper:{}", lower, upper);
         for (int i = lower; i < upper; i++) {
             ArrayList<RID> subRes = childNodes.get(i).range(low, high);
             if (subRes != null)

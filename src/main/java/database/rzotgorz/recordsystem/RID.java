@@ -33,4 +33,9 @@ public class RID {
     public void setSlotId(int slotId) {
         this.slotId = slotId;
     }
+
+    @Override
+    public String toString() {
+        return String.format("(%d, %d)", pageId, slotId);
+    }
 }

@@ -237,7 +237,6 @@ public class DatabaseController {
         if (pack.handler.existsIndex(indexName))
             throw new RuntimeException(String.format("Indices %s already exists!", indexName));
         if (pack.info.existsIndex(columnName)) {
-
             pack.handler.createIndex(indexName, tableName, columnName);
             return;
         }
@@ -372,6 +371,8 @@ public class DatabaseController {
             FileIndex index = indexManager.openedIndex(currentUsingDatabase, tableName, pack.info.getIndex(entry.getKey()));
             if (result == null) {
                 ArrayList<RID> res = index.range(entry.getValue().lower, entry.getValue().upper);
+                if(res == null)
+                    return null;
                 (result = new HashSet<>()).addAll(Set.copyOf(index.range(entry.getValue().lower, entry.getValue().upper)));
             } else
                 result.retainAll(index.range(entry.getValue().lower, entry.getValue().upper));
@@ -424,7 +425,7 @@ public class DatabaseController {
         }
         RecordDataPack pack = searchIndices(tableName, clauses);
         assert pack.records == null || pack.records.size() <= 1;
-        return pack.records == null || pack.records.size() != 1 || !pack.records.get(0).getRid().equals(currentRow);
+        return !((pack.records != null && pack.records.size() >= 1 && currentRow != null && currentRow.equals(pack.records.get(0).getRid())) || pack.records == null || pack.records.size() == 0);
     }
 
     public boolean checkPrimaryConstraint(String tableName, List<Object> values, RID currentRow) throws UnsupportedEncodingException {

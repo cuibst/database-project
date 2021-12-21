@@ -254,6 +254,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
             try {
                 controller.insertRecord(tableName, (List<Object>) valueList);
             } catch (Exception e) {
+                e.printStackTrace();
                 return new MessageResult(e.getMessage(), true);
             }
         }

@@ -15,7 +15,7 @@ public class DbInfo implements Serializable {
     private Map<String, TableInfo> tbMap;
     private Map<String, IndexInfo> index;
 
-    public static class IndexInfo {
+    public static class IndexInfo implements Serializable {
         public final String tableName;
         public final String columnName;
 
