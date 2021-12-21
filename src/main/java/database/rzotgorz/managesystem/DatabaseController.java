@@ -147,7 +147,7 @@ public class DatabaseController {
             return new MessageResult("No database is being used!", true);
         MetaHandler handler = metaManager.openMeta(currentUsingDatabase);
         handler.removeTable(tableName);
-        recordManager.deleteFile(getTablePath(tableName));
+        recordManager.deleteFile(rootPath + File.separator + getTablePath(tableName));
         return new MessageResult("ok");
     }
 
@@ -415,6 +415,65 @@ public class DatabaseController {
         return recordDataPack;
     }
 
+    public boolean checkAnyUnique(String tableName, List<String> columns, List<Object> values, RID currentRow) throws UnsupportedEncodingException {
+        List<WhereClause> clauses = new ArrayList<>();
+        for(int i=0;i<columns.size();i++) {
+            clauses.add(new ValueOperatorClause(tableName, columns.get(i), "=", values.get(i)));
+        }
+        RecordDataPack pack = searchIndices(tableName, clauses);
+        assert pack.records == null || pack.records.size() <= 1;
+        return pack.records == null || pack.records.size() != 1 || !pack.records.get(0).getRid().equals(currentRow);
+    }
+
+    public boolean checkPrimaryConstraint(String tableName, List<Object> values, RID currentRow) throws UnsupportedEncodingException {
+        InfoAndHandler pack = getTableInfo(tableName);
+        if(pack.info.getPrimary().size() == 0)
+            return false;
+        List<Object> checkValues = new ArrayList<>();
+        pack.info.getPrimary().forEach(primary -> checkValues.add(values.get(pack.info.getIndex(primary))));
+        return checkAnyUnique(tableName, pack.info.getPrimary(), checkValues, currentRow);
+    }
+
+    public boolean checkUniqueConstraint(String tableName, List<Object> values, RID currentRow) throws UnsupportedEncodingException {
+        InfoAndHandler pack = getTableInfo(tableName);
+        if(pack.info.getUnique().size() == 0)
+            return false;
+        for (String unique : pack.info.getUnique().keySet()) {
+            List<String> column = new ArrayList<>(List.of(unique));
+            List<Object> value = new ArrayList<>(List.of(values.get(pack.info.getIndex(unique))));
+            if (checkAnyUnique(tableName, column, value, currentRow))
+                return true;
+        }
+        return false;
+    }
+
+    public boolean checkForeignKeyConstraint(String tableName, List<Object> values){
+        InfoAndHandler pack = getTableInfo(tableName);
+        if(pack.info.getForeign().size() == 0)
+            return false;
+        for (Map.Entry<String, SQLTreeVisitor.ForeignKey> entry : pack.info.getForeign().entrySet()) {
+            String column = entry.getKey();
+            SQLTreeVisitor.ForeignKey foreignKey = entry.getValue();
+            Object value = values.get(pack.info.getIndex(column));
+            TableInfo foreignTable = pack.handler.getTable(foreignKey.targetTable);
+            int foreignIndexId = foreignTable.getIndex(foreignKey.name);
+            FileIndex index = indexManager.openedIndex(currentUsingDatabase, foreignKey.targetTable, foreignIndexId);
+            List<RID> result = index.range((Integer) value, (Integer) value);
+            if (result.size() == 0)
+                return true;
+        }
+        return false;
+    }
+
+    public void checkConstraints(String tableName, List<Object> values, RID currentRow) throws UnsupportedEncodingException {
+        if(checkPrimaryConstraint(tableName, values, currentRow))
+            throw new RuntimeException("Primary key constraint violated in table " + tableName + ".");
+        if(checkUniqueConstraint(tableName, values, currentRow))
+            throw new RuntimeException("Unique constraint violated in table " + tableName + ".");
+        if(checkForeignKeyConstraint(tableName, values))
+            throw new RuntimeException("Foreign key constraint violated in table " + tableName + ".");
+    }
+
     public TableResult scanIndices(String tableName, List<WhereClause> clauses) throws UnsupportedEncodingException {
         InfoAndHandler pack = getTableInfo(tableName);
         RecordDataPack recordDataPack = searchIndices(tableName, clauses);
@@ -427,17 +486,26 @@ public class DatabaseController {
         return new TableResult(pack.info.getHeader(), valuesList);
     }
 
-    public void insertRecord(String tableName, List<Object> valueList) {
-        try {
-            InfoAndHandler pack = getTableInfo(tableName);
-            List<String> stringList = new ArrayList<>();
-            valueList.forEach(obj -> stringList.add(obj.toString()));
-            byte[] data = pack.info.buildRecord(stringList);
-            FileHandler fileHandler = recordManager.openFile(getTablePath(tableName));
-            Record rid = fileHandler.insertRecord(data);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    public void insertRecord(String tableName, List<Object> valueList) throws UnsupportedEncodingException {
+        InfoAndHandler pack = getTableInfo(tableName);
+        checkConstraints(tableName, valueList, null);
+        List<String> stringList = new ArrayList<>();
+        valueList.forEach(obj -> stringList.add(obj.toString()));
+        byte[] data = pack.info.buildRecord(stringList);
+        FileHandler fileHandler = recordManager.openFile(getTablePath(tableName));
+        Record rid = fileHandler.insertRecord(data);
+        insertIndices(pack.info, currentUsingDatabase, valueList, rid.getRid());
+    }
+
+    public void insertIndices(TableInfo tableInfo, String databaseName, List<Object> values, RID rid) {
+        tableInfo.getIndicesMap().forEach((indexColumn, rootId) -> {
+            FileIndex index = indexManager.openedIndex(databaseName, tableInfo.getName(), rootId);
+            int columnId = tableInfo.getIndex(indexColumn);
+            if(values.get(columnId) != null)
+                index.insert((Integer)values.get(columnId), rid);
+            else
+                index.insert(Long.MIN_VALUE, rid);
+        });
     }
 
     public ResultItem updateRecord(String tableName, List<SetClause> setClauses, List<WhereClause> whereClauses) {
@@ -500,11 +568,8 @@ public class DatabaseController {
             csvName = "." + File.separator + "csv" + File.separator + csvName;
             this.createTable(new TableInfo(tableName, Csv.parserHeader(csvName)));
             List<Object[]> objects = Csv.readCsv("", csvName);
-            for (int i = 0; i < objects.size(); i++) {
-                List<Object> objectList = new ArrayList<>();
-                for (int j = 0; j < objects.get(i).length; j++) {
-                    objectList.add(objects.get(i)[j]);
-                }
+            for (Object[] object : objects) {
+                List<Object> objectList = new ArrayList<>(Arrays.asList(object));
                 this.insertRecord(tableName, objectList);
             }
         } catch (Exception e) {
@@ -523,7 +588,7 @@ public class DatabaseController {
         FileScanner fileScanner = new FileScanner(fileHandler);
         List<NameAndTypePack> list = tableInfo.getPack();
         String[] headers = Csv.processHeader(list);
-        csvName = csvName.replace("\'", "");
+        csvName = csvName.replace("'", "");
         Csv.createCsv("", csvName, headers, null, false);
         for (Record record : fileScanner) {
             try {
