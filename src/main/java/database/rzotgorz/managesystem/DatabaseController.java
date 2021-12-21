@@ -269,7 +269,6 @@ public class DatabaseController {
         metaManager.closeMeta(currentUsingDatabase);
     }
 
-
     public List<Function> buildFunctions(String tableName, List<WhereClause> clauses, MetaHandler metaHandler) {
         TableInfo tableInfo = metaHandler.getTable(tableName);
         List<Function> functions = new ArrayList<>();
@@ -508,6 +507,17 @@ public class DatabaseController {
                 index.insert((Integer) values.get(columnId), rid);
             else
                 index.insert(Long.MIN_VALUE, rid);
+        });
+    }
+
+    public void deleteIndices(TableInfo tableInfo, String databaseName, List<Object> values, RID rid) {
+        tableInfo.getIndicesMap().forEach((indexColumn, rootId) -> {
+            FileIndex index = indexManager.openedIndex(databaseName, tableInfo.getName(), rootId);
+            int columnId = tableInfo.getIndex(indexColumn);
+            if (values.get(columnId) != null)
+                index.remove((Integer) values.get(columnId), rid);
+            else
+                index.remove(Long.MIN_VALUE, rid);
         });
     }
 
