@@ -49,7 +49,7 @@ io_statement
     ;
 
 table_statement
-    : 'CREATE' 'TABLE' Identifier '(' field_list ')'                    # create_table
+    : 'CREATE' 'TABLE' Identifier '(' field_list ')'                    # createD_table
     | 'DROP' 'TABLE' Identifier                                         # drop_table
     | 'DESC' Identifier                                                 # describe_table
     | 'INSERT' 'INTO' Identifier 'VALUES' value_lists                   # insert_into_table

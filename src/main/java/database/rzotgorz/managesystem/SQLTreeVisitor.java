@@ -265,7 +265,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
         String tableName = ctx.Identifier().getText();
         List<SetClause> setClauses = (ctx.set_clause() == null) ? new ArrayList<>() : (List<SetClause>) ctx.set_clause().accept(this);
         List<WhereClause> whereClauses = (ctx.where_and_clause() == null) ? new ArrayList<>() : (List<WhereClause>) ctx.where_and_clause().accept(this);
-        return new OperationResult("Update", 0);
+        return controller.updateRecord(tableName, setClauses, whereClauses);
     }
 
     @Override
@@ -353,7 +353,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     public List<SetClause> visitSet_clause(SQLParser.Set_clauseContext ctx) {
         List<SetClause> result = new ArrayList<>();
         for (int i = 0; i < ctx.value().size(); i++) {
-            result.add(new SetClause(ctx.Identifier(i).toString(), ctx.value(i).toString()));
+            result.add(new SetClause(ctx.Identifier(i).toString(), ctx.value().get(i).getText()));
         }
         return result;
     }

@@ -139,6 +139,14 @@ public class TableInfo implements Serializable {
         return list;
     }
 
+    public List<String> getColumnName() {
+        List<String> list = new ArrayList<>();
+        for (Map.Entry<String, ColumnInfo> entry : this.columns.entrySet()) {
+            list.add(entry.getValue().getName());
+        }
+        return list;
+    }
+
     public List<NameAndTypePack> getPack() {
         List<NameAndTypePack> list = new ArrayList<>();
         for (Map.Entry<String, ColumnInfo> entry : this.columns.entrySet()) {
