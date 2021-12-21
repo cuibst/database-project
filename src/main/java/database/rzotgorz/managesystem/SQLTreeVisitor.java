@@ -101,6 +101,11 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
         return controller.showTables();
     }
 
+    @Override
+    public Object visitShow_indexes(SQLParser.Show_indexesContext ctx) {
+        return controller.showIndices();
+    }
+
     private static class ValueType {
         public String type;
         public int size;
@@ -304,6 +309,76 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
             return null;
     }
 
+    @Override
+    public Object visitAlter_add_index(SQLParser.Alter_add_indexContext ctx) {
+        String tableName = ctx.Identifier().getText();
+        List<String> columns = ((PrimaryKey)ctx.identifiers().accept(this)).fields;
+        for (String column : columns) {
+            try {
+                controller.createIndex(column, tableName, column);
+            } catch (Exception e) {
+                return new MessageResult(e.getMessage(), true);
+            }
+        }
+        return new OperationResult("added", columns.size());
+    }
+
+    @Override
+    public Object visitAlter_drop_index(SQLParser.Alter_drop_indexContext ctx) {
+        String tableName = ctx.Identifier().getText();
+        List<String> columns = ((PrimaryKey)ctx.identifiers().accept(this)).fields;
+        for (String column : columns) {
+            try {
+                controller.removeIndex(column);
+            } catch (Exception e) {
+                return new MessageResult(e.getMessage(), true);
+            }
+        }
+        return new OperationResult("dropped", columns.size());
+    }
+
+    @Override
+    public Object visitAlter_table_drop_pk(SQLParser.Alter_table_drop_pkContext ctx) {
+        String tableName = ctx.Identifier(0).getText();
+        controller.removePrimary(tableName);
+        return new MessageResult(String.format("Primary key for table %s dropped.", tableName));
+    }
+
+    @Override
+    public Object visitAlter_table_drop_foreign_key(SQLParser.Alter_table_drop_foreign_keyContext ctx) {
+        return super.visitAlter_table_drop_foreign_key(ctx);
+    }
+
+    @Override
+    public Object visitAlter_table_add_pk(SQLParser.Alter_table_add_pkContext ctx) {
+        String tableName = ctx.Identifier(0).getText();
+        PrimaryKey primaryKey = (PrimaryKey) ctx.identifiers().accept(this);
+        try {
+            controller.setPrimary(tableName, primaryKey);
+        } catch (Exception e) {
+            return new MessageResult(e.getMessage(), true);
+        }
+        return new MessageResult("Primary key set for table " + tableName);
+    }
+
+    @Override
+    public Object visitAlter_table_add_foreign_key(SQLParser.Alter_table_add_foreign_keyContext ctx) {
+        return super.visitAlter_table_add_foreign_key(ctx);
+    }
+
+    @Override
+    public Object visitAlter_table_add_unique(SQLParser.Alter_table_add_uniqueContext ctx) {
+        String tableName = ctx.Identifier().getText();
+        List<String> columns = ((PrimaryKey)ctx.identifiers().accept(this)).fields;
+        for (String column : columns) {
+            try {
+                controller.addUniqueConstraint(tableName, column, column + ".unique");
+            } catch (Exception e) {
+                return new MessageResult(e.getMessage(), true);
+            }
+        }
+        return new MessageResult(String.format("%d unique constraints added", columns.size()));
+    }
 
     @Override
     public Object visitSelect_table(SQLParser.Select_tableContext ctx) {
