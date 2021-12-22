@@ -185,18 +185,24 @@ public class DatabaseController {
 
     public ResultItem describeTable(String tableName) {
         InfoAndHandler pack = getTableInfo(tableName);
-        List<String> header = Arrays.asList("Field", "Type", "Null", "Key", "Default", "Extra");
-        LinkedHashMap<String, String[]> data = pack.info.describe();
+        List<String> header = Arrays.asList("Field", "Type", "Null", "Default");
+        TableInfo.TableDescription data = pack.info.describe();
         List<List<Object>> columns = new ArrayList<>();
-        data.forEach((s, strings) -> columns.add(Arrays.asList(strings)));
-        return new TableResult(header, columns);
+        data.columns.forEach((s, strings) -> columns.add(Arrays.asList(strings)));
+        TableResult columnInfo = new TableResult(header, columns);
+        List<List<Object>> keys = new ArrayList<>();
+        data.keyInfos.forEach(strings -> keys.add(Arrays.asList(strings)));
+        TableResult keyInfo = new TableResult(data.headers, keys);
+        return new DescriptionResult(columnInfo, keyInfo);
     }
 
-    public void addUniqueConstraint(String tableName, String columnName, String constraintName) throws Exception {
+    public void addUniqueConstraint(String tableName, String constraintName, List<String> columns) throws Exception {
         InfoAndHandler pack = getTableInfo(tableName);
-        pack.handler.addUnique(pack.info, columnName, constraintName);
-        if (!pack.info.existsIndex(constraintName))
-            createIndex(constraintName, tableName, columnName);
+        pack.handler.addUnique(pack.info, constraintName, columns);
+        for(String column : columns) {
+            if(!pack.info.existsIndex(column))
+                createIndex(tableName + "." + column, tableName, column);
+        }
     }
 
     public void addForeignKeyConstraint(String tableName, SQLTreeVisitor.ForeignKey foreignKey) throws Exception {
@@ -454,10 +460,12 @@ public class DatabaseController {
         InfoAndHandler pack = getTableInfo(tableName);
         if (pack.info.getUnique().size() == 0)
             return false;
-        for (String unique : pack.info.getUnique().keySet()) {
-            List<String> column = new ArrayList<>(List.of(unique));
-            List<Object> value = new ArrayList<>(List.of(values.get(pack.info.getIndex(unique))));
-            if (checkAnyUnique(tableName, column, value, currentRow))
+        for (List<String> unique : pack.info.getUnique().values()) {
+            List<Object> value = new ArrayList<>();
+            unique.forEach(column -> {
+                value.add(values.get(pack.info.getIndex(column)));
+            });
+            if (checkAnyUnique(tableName, unique, value, currentRow))
                 return true;
         }
         return false;

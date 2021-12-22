@@ -54,7 +54,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
                     results.add(result);
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+//                e.printStackTrace();
                 ResultItem errorResult = new MessageResult(e.getMessage(), true);
                 errorResult.cost = getTimeDelta();
                 results.add(errorResult);
@@ -402,14 +402,12 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     public Object visitAlter_table_add_unique(SQLParser.Alter_table_add_uniqueContext ctx) {
         String tableName = ctx.Identifier().getText();
         List<String> columns = ((PrimaryKey)ctx.identifiers().accept(this)).fields;
-        for (String column : columns) {
-            try {
-                controller.addUniqueConstraint(tableName, column, tableName + "." + column + ".unique");
-            } catch (Exception e) {
-                return new MessageResult(e.getMessage(), true);
-            }
+        try {
+            controller.addUniqueConstraint(tableName, tableName + "." + columns.toString() + ".unique", columns);
+        } catch (Exception e) {
+            return new MessageResult(e.getMessage(), true);
         }
-        return new MessageResult(String.format("%d unique constraints added", columns.size()));
+        return new MessageResult(String.format("Unique constraints %s added", tableName + "." + columns.toString() + ".unique"));
     }
 
     @Override

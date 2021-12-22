@@ -129,8 +129,8 @@ public class MetaHandler {
         this.dump();
     }
 
-    public void addUnique(TableInfo tableInfo, String colName, String unique) {
-        tableInfo.addUnique(colName, unique);
+    public void addUnique(TableInfo tableInfo, String constraintName, List<String> unique) {
+        tableInfo.addUnique(constraintName, unique);
         this.dump();
     }
 

@@ -37,16 +37,14 @@ public class ColumnInfo implements Serializable {
     }
 
     public String[] getDescription() {
-        String[] object = new String[6];
+        String[] object = new String[4];
         object[0] = this.name;
         if (!this.type.equals("VARCHAR"))
             object[1] = this.type;
         else
             object[1] = String.format("%s(%d)", this.type, this.size);
         object[2] = "NO";
-        object[3] = "";
-        object[4] = this.defaultValue == null ? "null" : this.defaultValue.toString();
-        object[5] = "";
+        object[3] = this.defaultValue == null ? "null" : this.defaultValue.toString();
         return object;
     }
 

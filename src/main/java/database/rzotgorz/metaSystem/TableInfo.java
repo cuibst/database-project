@@ -18,7 +18,7 @@ public class TableInfo implements Serializable {
     private List<String> primary;
     private Map<String, SQLTreeVisitor.ForeignKey> foreign;
     private List<String> index;
-    private HashMap<String, String> unique;
+    private HashMap<String, List<String>> unique;
     private List<Integer> sizeList;
     private List<String> typeList;
     private HashMap<String, Integer> colIndex;
@@ -39,27 +39,57 @@ public class TableInfo implements Serializable {
         this.updateParams();
     }
 
-    public LinkedHashMap<String, String[]> describe() {
+    public static class TableDescription {
+        public LinkedHashMap<String, String[]> columns;
+        public List<String> headers;
+        public List<String[]> keyInfos;
+
+        public TableDescription(LinkedHashMap<String, String[]> columns, List<String> headers, List<String[]> keyInfos) {
+            this.columns = columns;
+            this.headers = headers;
+            this.keyInfos = keyInfos;
+        }
+    }
+
+    public TableDescription describe() {
         LinkedHashMap<String, String[]> objects = new LinkedHashMap<>();
+        List<String> header = new ArrayList<>();
+        header.add("keyName");
         for (Map.Entry<String, ColumnInfo> entry : columns.entrySet()) {
             objects.put(entry.getKey(), entry.getValue().getDescription());
+            header.add(entry.getKey());
         }
-        for (String value : this.primary) {
-            objects.get(value)[3] = "PRI";
+//        for (String value : this.primary) {
+//            objects.get(value)[3] = "PRI";
+//        }
+        List<String[]> keysInfo = new ArrayList<>();
+        String[] pri = new String[header.size()];
+        for(int i=0;i<header.size();i++)
+            pri[i] = "";
+        pri[0] = "PRIMARY";
+        for(String value : primary) {
+            pri[header.indexOf(value)] = "x";
         }
+        keysInfo.add(pri);
         foreign.forEach((s, foreignKey) -> {
-            foreignKey.columns.forEach(column -> {
-                if(objects.get(column)[3].equals(""))
-                    objects.get(column)[3] = "FOR";
-                else
-                    objects.get(column)[3] = "MUL";
-            });
+            String[] info = new String[header.size()];
+            for(int i=0;i<header.size();i++)
+                info[i] = "";
+            info[0] = String.format("FOREIGN KEY '%s' TO TABLE '%s'", foreignKey.foreignKeyName, foreignKey.targetTable);
+            for(int i=0;i<foreignKey.columns.size();i++) {
+                info[header.indexOf(foreignKey.columns.get(i))] = foreignKey.targetColumns.get(i);
+            }
+            keysInfo.add(info);
         });
-        unique.keySet().forEach(column -> {
-            if(objects.get(column)[3].equals(""))
-                objects.get(column)[3] = "UNI";
+        unique.forEach((name, uni) -> {
+            String[] info = new String[header.size()];
+            for(int i=0;i<header.size();i++)
+                info[i] = "";
+            info[0] = String.format("UNIQUE %s", name);
+            uni.forEach(column -> info[header.indexOf(column)] = "o");
+            keysInfo.add(info);
         });
-        return objects;
+        return new TableDescription(objects, header, keysInfo);
     }
 
     public void updateParams() {
@@ -98,7 +128,7 @@ public class TableInfo implements Serializable {
         this.foreign.remove(name);
     }
 
-    public void addUnique(String col, String unique) {
+    public void addUnique(String col, List<String> unique) {
         this.unique.put(col, unique);
     }
 

@@ -12,6 +12,7 @@ import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.jline.builtins.Completers;
 import org.jline.reader.Completer;
+import org.jline.reader.EndOfFileException;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
 import org.jline.reader.impl.completer.AggregateCompleter;
@@ -21,8 +22,7 @@ import org.jline.reader.impl.completer.StringsCompleter;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
 
-import java.io.IOException;
-import java.io.Serializable;
+import java.io.*;
 import java.nio.file.NotDirectoryException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -50,6 +50,18 @@ public class Main {
 
     public static void main(String[] args) throws IOException {
 
+        InputStream in = System.in;
+        PrintStream out = System.out;
+
+        if(args.length != 0) {
+            if(args.length == 1) {
+                in = new FileInputStream(args[0]);
+            } else {
+                in = new FileInputStream(args[0]);
+                out = new PrintStream(new FileOutputStream(args[1]));
+            }
+        }
+
         SQLTreeVisitor visitor = new SQLTreeVisitor();
         DatabaseController controller;
         try {
@@ -59,7 +71,11 @@ public class Main {
             return;
         }
 
-        Terminal terminal = TerminalBuilder.builder().system(true).build();
+        Terminal terminal;
+        if(in.equals(System.in))
+            terminal = TerminalBuilder.builder().system(true).build();
+        else
+            terminal = TerminalBuilder.builder().system(false).streams(in, System.out).build();
 
         Completer createCompleter = new ArgumentCompleter(
                 new StringsCompleter("CREATE"),
@@ -149,7 +165,19 @@ public class Main {
             String prompt = controller.getCurrentUsingDatabase() == null ? "llhdb> " : String.format("llhdb(%s)> ", controller.getCurrentUsingDatabase());
             if (!line.toString().equals(""))
                 prompt = " ".repeat(prompt.length() - 3) + "-> ";
-            String currentLine = lineReader.readLine(prompt);
+            String currentLine = "";
+            try {
+                currentLine = lineReader.readLine(prompt);
+            } catch (EndOfFileException e) {
+                if (!line.toString().equals("")) {
+                    line.append(currentLine);
+                }
+                if (currentLine.stripTrailing().endsWith(";")) {
+                    Object r = controller.execute(line.toString());
+                    printResults(r, out);
+                }
+                break;
+            }
             line.append(currentLine);
             if (line.toString().equals("exit")) {
                 System.out.println("bye!");
@@ -157,19 +185,19 @@ public class Main {
             }
             if (currentLine.stripTrailing().endsWith(";")) {
                 Object e = controller.execute(line.toString());
-                printResults(e);
+                printResults(e, out);
                 line = new StringBuilder();
             }
         }
         controller.shutdown();
     }
 
-    private static void printResults(Object e) {
+    private static void printResults(Object e, PrintStream out) {
         if (e != null) {
             if (e.getClass() == MessageResult.class) {
-                System.out.println(e);
-                System.out.println("Result received in " + ((ResultItem) e).cost + "ms.");
-                System.out.println("=".repeat(30));
+                out.println(e);
+                out.println("Result received in " + ((ResultItem) e).cost + "ms.");
+                out.println("=".repeat(30));
             } else {
                 boolean flag = false;
                 assert e.getClass() == ArrayList.class;
@@ -177,11 +205,13 @@ public class Main {
                     if (!flag)
                         flag = true;
                     else
-                        System.out.println();
-                    System.out.println(resultItem);
-                    System.out.println("Result received in " + resultItem.cost + "ms.");
+                        out.println();
+                    out.println(resultItem);
+                    if(out.equals(System.out))
+                        out.println("Result received in " + resultItem.cost + "ms.");
                 }
-//                System.out.println("=".repeat(30));
+                if(!out.equals(System.out))
+                    out.println();
             }
         }
     }
