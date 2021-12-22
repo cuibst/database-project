@@ -315,7 +315,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
         List<String> columns = ((PrimaryKey)ctx.identifiers().accept(this)).fields;
         for (String column : columns) {
             try {
-                controller.createIndex(column, tableName, column);
+                controller.createIndex(tableName + "." + column, tableName, column);
             } catch (Exception e) {
                 return new MessageResult(e.getMessage(), true);
             }
@@ -346,6 +346,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
 
     @Override
     public Object visitAlter_table_drop_foreign_key(SQLParser.Alter_table_drop_foreign_keyContext ctx) {
+        //TODO;
         return super.visitAlter_table_drop_foreign_key(ctx);
     }
 
@@ -363,6 +364,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
 
     @Override
     public Object visitAlter_table_add_foreign_key(SQLParser.Alter_table_add_foreign_keyContext ctx) {
+        //TODO;
         return super.visitAlter_table_add_foreign_key(ctx);
     }
 
@@ -372,7 +374,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
         List<String> columns = ((PrimaryKey)ctx.identifiers().accept(this)).fields;
         for (String column : columns) {
             try {
-                controller.addUniqueConstraint(tableName, column, column + ".unique");
+                controller.addUniqueConstraint(tableName, column, tableName + "." + column + ".unique");
             } catch (Exception e) {
                 return new MessageResult(e.getMessage(), true);
             }

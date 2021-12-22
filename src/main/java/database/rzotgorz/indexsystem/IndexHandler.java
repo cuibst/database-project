@@ -26,7 +26,7 @@ public class IndexHandler {
         this.dbName = dbName;
         this.fileManager = fm;
         this.modified = true;
-        String path = "." + File.separator + "data" + File.separator + dbName + File.separator + dbName + ".index";
+        String path = dbName + File.separator + dbName + ".index";
         File file = new File(path);
         if (!file.exists())
             this.fileId = fm.createFile(path);
