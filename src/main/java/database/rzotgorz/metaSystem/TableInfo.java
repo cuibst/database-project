@@ -44,23 +44,21 @@ public class TableInfo implements Serializable {
         for (Map.Entry<String, ColumnInfo> entry : columns.entrySet()) {
             objects.put(entry.getKey(), entry.getValue().getDescription());
         }
-        for (int i = 0; i < this.primary.size(); i++) {
-            objects.get(primary.get(i))[3] = "PRI";
+        for (String value : this.primary) {
+            objects.get(value)[3] = "PRI";
         }
-        for (int i = 0; i < this.foreign.size(); i++) {
-            if (objects.get(foreign.get(i))[3].equals("")) {
-                objects.get(foreign.get(i))[3] = "FOR";
-            } else {
-                objects.get(foreign.get(i))[3] = "MUL";
-            }
-        }
-        for (Map.Entry<String, String> entry : unique.entrySet()) {
-            if (objects.get(foreign.get(entry.getKey()))[3].equals("")) {
-                objects.get(foreign.get(entry.getKey()))[3] = "UNI";
-            } else {
-                objects.get(foreign.get(entry.getKey()))[3] = "";
-            }
-        }
+        foreign.forEach((s, foreignKey) -> {
+            foreignKey.columns.forEach(column -> {
+                if(objects.get(column)[3].equals(""))
+                    objects.get(column)[3] = "FOR";
+                else
+                    objects.get(column)[3] = "MUL";
+            });
+        });
+        unique.keySet().forEach(column -> {
+            if(objects.get(column)[3].equals(""))
+                objects.get(column)[3] = "UNI";
+        });
         return objects;
     }
 
@@ -92,12 +90,12 @@ public class TableInfo implements Serializable {
         this.updateParams();
     }
 
-    public void addForeign(String col, SQLTreeVisitor.ForeignKey foreign) {
-        this.foreign.put(col, foreign);
+    public void addForeign(String name, SQLTreeVisitor.ForeignKey foreign) {
+        this.foreign.put(name, foreign);
     }
 
-    public void removeForeign(String col) {
-        this.foreign.remove(col);
+    public void removeForeign(String name) {
+        this.foreign.remove(name);
     }
 
     public void addUnique(String col, String unique) {
@@ -162,6 +160,10 @@ public class TableInfo implements Serializable {
 
     public void createIndex(String name, int rootId) {
         this.indicesMap.put(name, rootId);
+    }
+
+    public Integer getRootId(String columnName) {
+        return this.indicesMap.get(columnName);
     }
 
     public void removeIndex(String name) {

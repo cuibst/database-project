@@ -119,13 +119,13 @@ public class MetaHandler {
         this.dump();
     }
 
-    public void addForeign(String tbName, String colName, SQLTreeVisitor.ForeignKey foreign) {
-        this.dbInfo.getTbMap().get(tbName).addForeign(colName, foreign);
+    public void addForeign(String tbName, SQLTreeVisitor.ForeignKey foreign) {
+        this.dbInfo.getTbMap().get(tbName).addForeign(foreign.foreignKeyName, foreign);
         this.dump();
     }
 
-    public void removeForeign(String tbName, String colName) {
-        this.dbInfo.getTbMap().get(tbName).removeForeign(colName);
+    public void removeForeign(String tbName, String keyName) {
+        this.dbInfo.getTbMap().get(tbName).removeForeign(keyName);
         this.dump();
     }
 

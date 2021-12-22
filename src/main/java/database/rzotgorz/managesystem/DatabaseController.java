@@ -199,15 +199,15 @@ public class DatabaseController {
             createIndex(constraintName, tableName, columnName);
     }
 
-    public void addForeignKeyConstraint(String tableName, String columnName, SQLTreeVisitor.ForeignKey foreignKey, String constraintName) throws Exception {
+    public void addForeignKeyConstraint(String tableName, SQLTreeVisitor.ForeignKey foreignKey) throws Exception {
         if (currentUsingDatabase == null)
             throw new RuntimeException("No database is being used!");
         MetaHandler metaHandler = metaManager.openMeta(currentUsingDatabase);
-        metaHandler.addForeign(tableName, columnName, foreignKey);
-        if (constraintName == null && !metaHandler.existsIndex(foreignKey.targetTable + '.' + foreignKey.name))
-            createIndex(foreignKey.targetTable + '.' + foreignKey.name, foreignKey.targetTable, foreignKey.name);
-        else if (!metaHandler.existsIndex(constraintName))
-            createIndex(constraintName, foreignKey.targetTable, foreignKey.name);
+        metaHandler.addForeign(tableName, foreignKey);
+        for (String column : foreignKey.targetColumns) {
+            if (!metaHandler.existsIndex(foreignKey.targetTable + "." + column))
+                createIndex(foreignKey.targetTable + "." + column, foreignKey.targetTable, column);
+        }
     }
 
     public void setPrimary(String tableName, SQLTreeVisitor.PrimaryKey primaryKey) throws Exception {
@@ -228,22 +228,21 @@ public class DatabaseController {
             throw new RuntimeException("No database is being used!");
         MetaHandler metaHandler = metaManager.openMeta(currentUsingDatabase);
         List<String> key = metaHandler.getTable(tableName).getPrimary();
-        key.forEach(column -> {
-            if (metaHandler.existsIndex(tableName + "." + column))
-                removeIndex(tableName + "." + column);
-        });
+//        key.forEach(column -> {
+//            if (metaHandler.existsIndex(tableName + "." + column))
+//                removeIndex(tableName + "." + column);
+//        });
     }
 
-    public void removeForeignKeyConstraint(String tableName, String column, String constraintName) {
+    public void removeForeignKeyConstraint(String tableName, String constraintName) {
         if (currentUsingDatabase == null)
             throw new RuntimeException("No database is being used!");
-        if (constraintName == null) {
-            MetaHandler metaHandler = metaManager.openMeta(currentUsingDatabase);
-            metaHandler.removeForeign(tableName, column);
-            SQLTreeVisitor.ForeignKey key = metaHandler.getTable(tableName).getForeign().get(column);
-            removeIndex(key.targetTable + "." + key.name);
-        } else
-            removeIndex(constraintName);
+        MetaHandler metaHandler = metaManager.openMeta(currentUsingDatabase);
+        SQLTreeVisitor.ForeignKey key = metaHandler.getTable(tableName).getForeign().get(constraintName);
+//        key.targetColumns.forEach(column -> {
+//            removeIndex(key.targetTable + "." + column);
+//        });
+        metaHandler.removeForeign(tableName, constraintName);
     }
 
     public void createIndex(String indexName, String tableName, String columnName) throws Exception {
@@ -347,7 +346,7 @@ public class DatabaseController {
         clauses.forEach(clause -> {
             if ((!(clause instanceof ValueOperatorClause)) || (clause.getTableName() != null && !clause.getTableName().equals(tableName)))
                 return;
-            Integer index = pack.info.getIndex(clause.getColumnName());
+            Integer index = pack.info.getRootId(clause.getColumnName());
             if (index != null && pack.info.existsIndex(clause.getColumnName())) {
                 String operator = ((ValueOperatorClause) clause).getOperator();
                 String columnName = clause.getColumnName();
@@ -382,7 +381,7 @@ public class DatabaseController {
         });
         Set<RID> result = null;
         for (Map.Entry<String, Interval> entry : indexMap.entrySet()) {
-            FileIndex index = indexManager.openedIndex(currentUsingDatabase, tableName, pack.info.getIndex(entry.getKey()));
+            FileIndex index = indexManager.openedIndex(currentUsingDatabase, tableName, pack.info.getRootId(entry.getKey()));
             if (result == null) {
                 ArrayList<RID> res = index.range(entry.getValue().lower, entry.getValue().upper);
                 if(res == null)
@@ -469,15 +468,19 @@ public class DatabaseController {
         if (pack.info.getForeign().size() == 0)
             return false;
         for (Map.Entry<String, SQLTreeVisitor.ForeignKey> entry : pack.info.getForeign().entrySet()) {
-            String column = entry.getKey();
-            SQLTreeVisitor.ForeignKey foreignKey = entry.getValue();
-            Object value = values.get(pack.info.getIndex(column));
-            TableInfo foreignTable = pack.handler.getTable(foreignKey.targetTable);
-            int foreignIndexId = foreignTable.getIndex(foreignKey.name);
-            FileIndex index = indexManager.openedIndex(currentUsingDatabase, foreignKey.targetTable, foreignIndexId);
-            List<RID> result = index.range((Integer) value, (Integer) value);
-            if (result.size() == 0)
-                return true;
+            List<String> columns = entry.getValue().columns;
+            for (int i = 0; i < columns.size(); i++) {
+                String column = columns.get(i);
+                String targetColumn = entry.getValue().targetColumns.get(i);
+                SQLTreeVisitor.ForeignKey foreignKey = entry.getValue();
+                Object value = values.get(pack.info.getIndex(column));
+                TableInfo foreignTable = pack.handler.getTable(foreignKey.targetTable);
+                int foreignIndexId = foreignTable.getRootId(targetColumn);
+                FileIndex index = indexManager.openedIndex(currentUsingDatabase, foreignKey.targetTable, foreignIndexId);
+                List<RID> result = index.range((Integer) value, (Integer) value);
+                if (result == null || result.size() == 0)
+                    return true;
+            }
         }
         return false;
     }

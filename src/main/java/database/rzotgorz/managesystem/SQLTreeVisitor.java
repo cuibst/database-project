@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
 import java.io.FileNotFoundException;
+import java.io.Serializable;
 import java.nio.file.FileAlreadyExistsException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -117,13 +118,22 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     }
 
 
-    public static class ForeignKey {
+    public static class ForeignKey implements Serializable {
+        public String foreignKeyName;
         public String targetTable;
-        public String name;
+        public List<String> columns;
+        public List<String> targetColumns;
 
-        public ForeignKey(String targetTable, String name) {
+        public ForeignKey(String foreignKeyName, String targetTable, List<String> columns, List<String> targetColumns) {
+            this.foreignKeyName = foreignKeyName;
             this.targetTable = targetTable;
-            this.name = name;
+            this.columns = columns;
+            this.targetColumns = targetColumns;
+        }
+
+        @Override
+        public String toString() {
+            return String.format("name: %s%n targetTable: %s%n columns: %s%n targetColumns: %s%n", foreignKeyName, targetTable, columns.toString(), targetColumns.toString());
         }
     }
 
@@ -154,9 +164,10 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
         ResultItem result = controller.createTable(new TableInfo(tableName, bundle.columnInfos));
         if (((MessageResult) result).isError())
             return result;
+        log.info(bundle.foreignKeys.toString());
         try {
             for (Map.Entry<String, ForeignKey> entry : bundle.foreignKeys.entrySet()) {
-                controller.addForeignKeyConstraint(tableName, entry.getKey(), entry.getValue(), null);
+                controller.addForeignKeyConstraint(tableName, entry.getValue());
             }
             if (bundle.primaryKey != null)
                 controller.setPrimary(tableName, bundle.primaryKey);
@@ -183,10 +194,12 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
                 ValueType type = (ValueType) ((SQLParser.Normal_fieldContext) field).type_().accept(this);
                 columns.put(name, new ColumnInfo(type.type, name, type.size, null));
             } else if (field.getClass() == SQLParser.Foreign_key_fieldContext.class) {
-                String[] keys = (String[]) field.accept(this);
-                if (keys.length != 3 || foreignKeyMap.containsKey(keys[0]))
-                    throw new ParseError("Field list parse error when parsing foreign key");
-                foreignKeyMap.put(keys[0], new ForeignKey(keys[1], keys[2]));
+                ForeignKey foreignKey = (ForeignKey) field.accept(this);
+                if(foreignKey.foreignKeyName == null)
+                    foreignKey.foreignKeyName = foreignKey.targetTable + "." + foreignKey.targetColumns.toString();
+                if(foreignKeyMap.containsKey(foreignKey.foreignKeyName))
+                    throw new RuntimeException("Foreign Key parse error, duplicated foreign keys");
+                foreignKeyMap.put(foreignKey.foreignKeyName, foreignKey);
             } else if (field.getClass() == SQLParser.Primary_key_fieldContext.class) {
                 PrimaryKey key = (PrimaryKey) field.accept(this);
                 for (String name : key.fields) {
@@ -214,13 +227,19 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
         return ctx.identifiers().accept(this);
     }
 
+
     @Override
-    public String[] visitForeign_key_field(SQLParser.Foreign_key_fieldContext ctx) {
-        String[] keys = new String[3];
-        int cnt = 0;
-        for (TerminalNode node : ctx.Identifier())
-            keys[cnt++] = node.getText();
-        return keys;
+    public ForeignKey visitForeign_key_field(SQLParser.Foreign_key_fieldContext ctx) {
+        List<String> columns = ((PrimaryKey) ctx.identifiers(0).accept(this)).fields;
+        List<String> targetColumns = ((PrimaryKey) ctx.identifiers(1).accept(this)).fields;
+        if(ctx.Identifier().size() == 1) {
+            String targetTable = ctx.Identifier(0).getText();
+            return new ForeignKey(null, targetTable, columns, targetColumns);
+        } else {
+            String name = ctx.Identifier(0).getText();
+            String targetTable = ctx.Identifier(1).getText();
+            return new ForeignKey(name, targetTable, columns, targetColumns);
+        }
     }
 
     @Override
@@ -346,8 +365,10 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
 
     @Override
     public Object visitAlter_table_drop_foreign_key(SQLParser.Alter_table_drop_foreign_keyContext ctx) {
-        //TODO;
-        return super.visitAlter_table_drop_foreign_key(ctx);
+        String tableName = ctx.Identifier(0).getText();
+        String keyName = ctx.Identifier(1).getText();
+        controller.removeForeignKeyConstraint(tableName, keyName);
+        return new MessageResult(String.format("Foreign key %s in table %s removed.", keyName, tableName));
     }
 
     @Override
@@ -364,8 +385,17 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
 
     @Override
     public Object visitAlter_table_add_foreign_key(SQLParser.Alter_table_add_foreign_keyContext ctx) {
-        //TODO;
-        return super.visitAlter_table_add_foreign_key(ctx);
+        String tableName = ctx.Identifier(0).getText();
+        String keyName = ctx.Identifier(1).getText();
+        String targetTable = ctx.Identifier(2).getText();
+        List<String> columns = ((PrimaryKey) ctx.identifiers(0).accept(this)).fields;
+        List<String> targetColumns = ((PrimaryKey) ctx.identifiers(1).accept(this)).fields;
+        try {
+            controller.addForeignKeyConstraint(tableName, new ForeignKey(keyName, targetTable, columns, targetColumns));
+        } catch (Exception e) {
+            return new MessageResult(e.getMessage(), true);
+        }
+        return new MessageResult(String.format("Foreign key %s for table %s added.", keyName, tableName));
     }
 
     @Override
