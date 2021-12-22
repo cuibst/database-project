@@ -8,10 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.ResourceBundle;
+import java.util.*;
 
 @Data
 @Slf4j
@@ -139,9 +136,26 @@ public class RecordManager {
         handler.setOpened(false);
     }
 
+    public void closeFile(String filename, Iterator<String> iterator) {
+        FileHandler handler = openFiles.get(filename);
+        if (handler == null)
+            return;
+        if (handler.getModifyHeader()) {
+            JSONObject newHeader = handler.getFileHeader();
+            byte[] headerBytes = changeJSONObjectToBytes(newHeader);
+            byte[] page = new byte[PAGE_SIZE];
+            System.arraycopy(headerBytes, 0, page, 0, headerBytes.length);
+            fm.putPage(handler.getFileId(), 0, page);
+        }
+        iterator.remove();
+        fm.closeFile(handler.getFileId());
+        handler.setOpened(false);
+    }
+
     public void shutdown() {
-        for (String name : openFiles.keySet()) {
-            this.closeFile(name);
+        for (Iterator<String> iterator = openFiles.keySet().iterator(); iterator.hasNext(); ) {
+            String name = iterator.next();
+            this.closeFile(name, iterator);
         }
         fm.shutdown();
     }

@@ -198,6 +198,13 @@ public class DatabaseController {
 
     public void addUniqueConstraint(String tableName, String constraintName, List<String> columns) throws Exception {
         InfoAndHandler pack = getTableInfo(tableName);
+        FileHandler fileHandler = recordManager.openFile(getTablePath(tableName));
+        FileScanner fileScanner = new FileScanner(fileHandler);
+        for (Record record : fileScanner) {
+            List<Object> data = pack.info.loadRecord(record);
+            if(checkAnyUnique(tableName, columns, data, record.getRid()))
+                throw new RuntimeException(String.format("Duplicated keys for %s", data));
+        }
         pack.handler.addUnique(pack.info, constraintName, columns);
         for(String column : columns) {
             if(!pack.info.existsIndex(column))
@@ -208,10 +215,23 @@ public class DatabaseController {
     public void addForeignKeyConstraint(String tableName, SQLTreeVisitor.ForeignKey foreignKey) throws Exception {
         if (currentUsingDatabase == null)
             throw new RuntimeException("No database is being used!");
-        MetaHandler metaHandler = metaManager.openMeta(currentUsingDatabase);
-        metaHandler.addForeign(tableName, foreignKey);
+        InfoAndHandler pack = getTableInfo(tableName);
+        InfoAndHandler targetPack = getTableInfo(foreignKey.targetTable);
+        FileHandler fileHandler = recordManager.openFile(getTablePath(tableName));
+        FileScanner fileScanner = new FileScanner(fileHandler);
+        for (Record record : fileScanner) {
+            List<Object> data = pack.info.loadRecord(record);
+            Object[] tmp = new Object[targetPack.info.getColIndex().size()];
+            for(int i=0;i<foreignKey.columns.size();i++) {
+                tmp[targetPack.info.getIndex(foreignKey.targetColumns.get(i))] = data.get(pack.info.getIndex(foreignKey.columns.get(i)));
+            }
+            List<Object> targetData = new ArrayList<>(Arrays.asList(tmp));
+            if(!checkAnyUnique(foreignKey.targetTable, foreignKey.targetColumns, targetData, null))
+                throw new RuntimeException(String.format("Foreign Key for %s cannot find matching result.", data.toString()));
+        }
+        pack.handler.addForeign(tableName, foreignKey);
         for (String column : foreignKey.targetColumns) {
-            if (!metaHandler.existsIndex(foreignKey.targetTable + "." + column))
+            if (!pack.handler.existsIndex(tableName + "." + column) && pack.info.getColumns().get(column).getType().equals("INT"))
                 createIndex(foreignKey.targetTable + "." + column, foreignKey.targetTable, column);
         }
     }
@@ -219,12 +239,19 @@ public class DatabaseController {
     public void setPrimary(String tableName, SQLTreeVisitor.PrimaryKey primaryKey) throws Exception {
         if (currentUsingDatabase == null)
             throw new RuntimeException("No database is being used!");
-        MetaHandler metaHandler = metaManager.openMeta(currentUsingDatabase);
-        metaHandler.setPrimary(tableName, primaryKey == null ? null : primaryKey.fields);
+        InfoAndHandler pack = getTableInfo(tableName);
+        FileHandler fileHandler = recordManager.openFile(getTablePath(tableName));
+        FileScanner fileScanner = new FileScanner(fileHandler);
+        for (Record record : fileScanner) {
+            List<Object> data = pack.info.loadRecord(record);
+            if(checkAnyUnique(tableName, primaryKey.fields, data, record.getRid()))
+                throw new RuntimeException(String.format("Duplicated keys for %s", data));
+        }
+        pack.handler.setPrimary(tableName, primaryKey == null ? null : primaryKey.fields);
         if (primaryKey == null)
             return;
         for (String column : primaryKey.fields) {
-            if (!metaHandler.existsIndex(tableName + "." + column))
+            if (!pack.handler.existsIndex(tableName + "." + column) && pack.info.getColumns().get(column).getType().equals("INT"))
                 createIndex(tableName + "." + column, tableName, column);
         }
     }
