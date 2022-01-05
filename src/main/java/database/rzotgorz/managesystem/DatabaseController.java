@@ -303,9 +303,7 @@ public class DatabaseController {
         for (Record record : fileScanner) {
             List<Object> data = pack.info.loadRecord(record);
             List<Comparable> content = new ArrayList<>();
-            columnId.forEach(id -> {
-                content.add((Comparable) data.get(id));
-            });
+            columnId.forEach(id -> content.add((Comparable) data.get(id)));
             index.insert(new IndexContent(content), record.getRid());
         }
         pack.handler.createIndex(indexName, tableName, columnName);
@@ -319,7 +317,7 @@ public class DatabaseController {
         TableInfo tableInfo = metaHandler.getTable(indexInfo.tableName);
         if (!metaHandler.existsIndex(indexName))
             throw new RuntimeException(String.format("Index %s doesn't exist!", indexName));
-        tableInfo.removeIndex(indexName);
+        tableInfo.removeIndex(metaHandler.getIndexInfo(indexName).columnName);
         metaHandler.removeIndex(indexName);
         metaManager.closeMeta(currentUsingDatabase);
     }
@@ -478,22 +476,16 @@ public class DatabaseController {
         InfoAndHandler infoPack = getTableInfo(tableName);
         log.info(infoPack.info.getIndicesMap().toString());
         if(infoPack.info.getRootId(columns) != null) {
-            log.info("Using index");
             int rootId = infoPack.info.getRootId(columns);
             FileIndex index = indexManager.openedIndex(currentUsingDatabase, tableName, rootId, columns.toString());
             List<Comparable> value = new ArrayList<>();
-            DbInfo.IndexInfo info = infoPack.handler.getDbInfo().getIndexInfo(tableName + "." + columns.toString());
-            info.columnName.forEach(column -> {
-                value.add((Comparable) values.get(infoPack.info.getIndex(column)));
-            });
+            DbInfo.IndexInfo info = infoPack.handler.getDbInfo().getIndexInfo(tableName + "." + columns);
+            info.columnName.forEach(column -> value.add((Comparable) values.get(infoPack.info.getIndex(column))));
             List<RID> rids = index.search(new IndexContent(value));
-            System.out.println(currentRow);
-            System.out.println(rids);
             if(rids == null || rids.isEmpty())
                 return false;
             return rids.size() != 1 || !rids.contains(currentRow);
         }
-        log.info("Using brute force");
         List<WhereClause> clauses = new ArrayList<>();
         for (int i = 0; i < columns.size(); i++) {
             clauses.add(new ValueOperatorClause(tableName, columns.get(i), "=", values.get(i)));
@@ -522,9 +514,7 @@ public class DatabaseController {
             return false;
         for (List<String> unique : pack.info.getUnique().values()) {
             List<Object> value = new ArrayList<>();
-            unique.forEach(column -> {
-                value.add(values.get(pack.info.getIndex(column)));
-            });
+            unique.forEach(column -> value.add(values.get(pack.info.getIndex(column))));
             if (checkAnyUnique(tableName, unique, value, currentRow))
                 return true;
         }
@@ -539,17 +529,85 @@ public class DatabaseController {
             List<String> columns = entry.getValue().columns;
             SQLTreeVisitor.ForeignKey foreignKey = entry.getValue();
             List<WhereClause> clauses = new ArrayList<>();
+            List<Comparable> indexValue = new ArrayList<>();
             for (int i = 0; i < columns.size(); i++) {
                 String column = columns.get(i);
                 String targetColumn = entry.getValue().targetColumns.get(i);
                 Object value = values.get(pack.info.getIndex(column));
+                indexValue.add((Comparable) value);
                 if(value == null)
                     throw new RuntimeException("Foreign key can't have null value.");
                 clauses.add(new ValueOperatorClause(foreignKey.targetTable, targetColumn, "=", value));
             }
-            RecordDataPack recordDataPack = searchIndices(foreignKey.targetTable, clauses);
-            if(recordDataPack.records == null || recordDataPack.records.size() == 0)
-                return true;
+            InfoAndHandler targetPack = getTableInfo(foreignKey.targetTable);
+            if(targetPack.info.getRootId(foreignKey.targetColumns) != null) {
+                log.info("index");
+                int rootId = targetPack.info.getRootId(foreignKey.targetColumns);
+                FileIndex index = indexManager.openedIndex(currentUsingDatabase, foreignKey.targetTable, rootId, foreignKey.targetColumns.toString());
+                List<RID> rids = index.search(new IndexContent(indexValue));
+                if(rids == null || rids.isEmpty())
+                    return true;
+            } else {
+                log.info("brute force");
+                RecordDataPack recordDataPack = searchIndices(foreignKey.targetTable, clauses);
+                if (recordDataPack.records == null || recordDataPack.records.size() == 0)
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     *
+     * @param tableName Table's name.
+     * @param values original record value.
+     * @param newValues new value, null if delete
+     * @return true when violate the constraint after delete
+     * @throws UnsupportedEncodingException ???
+     */
+    public boolean checkReverseForeignKeyConstraint(String tableName, List<Object> values, List<Object> newValues) throws UnsupportedEncodingException {
+        InfoAndHandler pack = getTableInfo(tableName);
+        for (TableInfo tableInfo : pack.handler.getDbInfo().getTbMap().values()) {
+            if (tableInfo.getName().equals(tableName))
+                continue;
+            for (SQLTreeVisitor.ForeignKey foreignKey : tableInfo.getForeign().values()) {
+                if (foreignKey.targetTable.equals(tableName)) {
+                    List<Comparable> originalValue = new ArrayList<>();
+                    List<Comparable> newValue = new ArrayList<>();
+                    foreignKey.targetColumns.forEach(column -> {
+                        originalValue.add((Comparable) values.get(tableInfo.getIndex(column)));
+                        if (newValues != null)
+                            newValue.add((Comparable) newValues.get(tableInfo.getIndex(column)));
+                    });
+                    IndexContent originContent = new IndexContent(originalValue);
+                    if (newValues != null) {
+                        IndexContent newContent = new IndexContent(newValue);
+                        if (originContent.compareTo(newContent) == 0)
+                            continue;
+                    }
+                    InfoAndHandler targetPack = getTableInfo(foreignKey.targetTable);
+                    if (targetPack.info.getRootId(foreignKey.targetColumns) != null) {
+                        log.info("index");
+                        int rootId = targetPack.info.getRootId(foreignKey.targetColumns);
+                        FileIndex index = indexManager.openedIndex(currentUsingDatabase, foreignKey.targetTable, rootId, foreignKey.targetColumns.toString());
+                        List<RID> rids = index.search(originContent);
+                        if (rids != null && !rids.isEmpty())
+                            return true;
+                    } else {
+                        log.info("brute force");
+                        List<WhereClause> clauses = new ArrayList<>();
+                        for (int i = 0; i < foreignKey.columns.size(); i++) {
+                            String column = foreignKey.columns.get(i);
+                            String targetColumn = foreignKey.targetColumns.get(i);
+                            Object value = values.get(pack.info.getIndex(column));
+                            clauses.add(new ValueOperatorClause(foreignKey.targetTable, targetColumn, "=", value));
+                        }
+                        RecordDataPack recordDataPack = searchIndices(foreignKey.targetTable, clauses);
+                        if (recordDataPack.records != null && recordDataPack.records.size() != 0)
+                            return true;
+                    }
+                }
+            }
         }
         return false;
     }
@@ -597,9 +655,7 @@ public class DatabaseController {
         pack.info.getIndicesMap().forEach((indexName, rootId) -> {
             DbInfo.IndexInfo info = pack.handler.getDbInfo().getIndexInfo(indexName);
             List<Comparable> value = new ArrayList<>();
-            info.columnName.forEach(column -> {
-                value.add((Comparable) values.get(pack.info.getIndex(column)));
-            });
+            info.columnName.forEach(column -> value.add((Comparable) values.get(pack.info.getIndex(column))));
             FileIndex index = indexManager.openedIndex(databaseName, tableName, rootId, info.columnName.toString());
             index.insert(new IndexContent(value), rid);
         });
@@ -610,9 +666,7 @@ public class DatabaseController {
         pack.info.getIndicesMap().forEach((indexName, rootId) -> {
             DbInfo.IndexInfo info = pack.handler.getDbInfo().getIndexInfo(indexName);
             List<Comparable> value = new ArrayList<>();
-            info.columnName.forEach(column -> {
-                value.add((Comparable) values.get(pack.info.getIndex(column)));
-            });
+            info.columnName.forEach(column -> value.add((Comparable) values.get(pack.info.getIndex(column))));
             FileIndex index = indexManager.openedIndex(databaseName, tableName, rootId, info.columnName.toString());
             index.remove(new IndexContent(value), rid);
         });
@@ -650,9 +704,7 @@ public class DatabaseController {
                 }
             });
 
-            dataPack.records.forEach(record -> {
-                handler.deleteRecord(record.getRid());
-            });
+            dataPack.records.forEach(record -> handler.deleteRecord(record.getRid()));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -773,27 +825,25 @@ public class DatabaseController {
                 List<List<Object>> nextData = new ArrayList<>();
                 nextHeader.addAll(mergedMap.get(outer).getHeaders());
                 nextHeader.addAll(mergedMap.get(inner).getHeaders());
-                mergedMap.get(outer).getData().forEach(outerRecord -> {
-                    mergedMap.get(inner).getData().forEach(innerRecord -> {
-                        boolean flag = true;
-                        for (Pair<String, String> columnPair : constraints) {
-                            String outerColumn = tablePair.first + '.' + columnPair.first;
-                            String innerColumn = tablePair.second + '.' + columnPair.second;
-                            int outerId = mergedMap.get(outer).getHeaderIndex(outerColumn);
-                            int innerId = mergedMap.get(inner).getHeaderIndex(innerColumn);
-                            if(!outerRecord.get(outerId).equals(innerRecord.get(innerId))) {
-                                flag = false;
-                                break;
-                            }
+                mergedMap.get(outer).getData().forEach(outerRecord -> mergedMap.get(inner).getData().forEach(innerRecord -> {
+                    boolean flag = true;
+                    for (Pair<String, String> columnPair : constraints) {
+                        String outerColumn = tablePair.first + '.' + columnPair.first;
+                        String innerColumn = tablePair.second + '.' + columnPair.second;
+                        int outerId = mergedMap.get(outer).getHeaderIndex(outerColumn);
+                        int innerId = mergedMap.get(inner).getHeaderIndex(innerColumn);
+                        if(!outerRecord.get(outerId).equals(innerRecord.get(innerId))) {
+                            flag = false;
+                            break;
                         }
-                        if(flag) {
-                            List<Object> concatRecord = new ArrayList<>();
-                            concatRecord.addAll(outerRecord);
-                            concatRecord.addAll(innerRecord);
-                            nextData.add(concatRecord);
-                        }
-                    });
-                });
+                    }
+                    if(flag) {
+                        List<Object> concatRecord = new ArrayList<>();
+                        concatRecord.addAll(outerRecord);
+                        concatRecord.addAll(innerRecord);
+                        nextData.add(concatRecord);
+                    }
+                }));
                 String newFather = unionFindSet.addEdge(outer, inner);
                 mergedMap.replace(newFather, new TableResult(nextHeader, nextData));
             }
@@ -816,14 +866,12 @@ public class DatabaseController {
             List<List<Object>> nextData = new ArrayList<>();
             nextHeader.addAll(outer.getHeaders());
             nextHeader.addAll(inner.getHeaders());
-            outer.getData().forEach(outerRecord -> {
-                inner.getData().forEach(innerRecord -> {
-                    List<Object> concatRecord = new ArrayList<>();
-                    concatRecord.addAll(outerRecord);
-                    concatRecord.addAll(innerRecord);
-                    nextData.add(concatRecord);
-                });
-            });
+            outer.getData().forEach(outerRecord -> inner.getData().forEach(innerRecord -> {
+                List<Object> concatRecord = new ArrayList<>();
+                concatRecord.addAll(outerRecord);
+                concatRecord.addAll(innerRecord);
+                nextData.add(concatRecord);
+            }));
             remainResult.remove(0);
             remainResult.remove(0);
             remainResult.add(new TableResult(nextHeader, nextData));
