@@ -95,7 +95,7 @@ public class MetaHandler {
         return this.dbInfo.getIndex().containsKey(name);
     }
 
-    public void createIndex(String indexName, String tbName, String colName) {
+    public void createIndex(String indexName, String tbName, List<String> colName) {
         this.dbInfo.createIndex(indexName, tbName, colName);
         this.dump();
     }

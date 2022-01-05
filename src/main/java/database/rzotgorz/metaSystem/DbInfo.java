@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Data
@@ -15,11 +16,13 @@ public class DbInfo implements Serializable {
     private Map<String, TableInfo> tbMap;
     private Map<String, IndexInfo> index;
 
+
+    @Data
     public static class IndexInfo implements Serializable {
         public final String tableName;
-        public final String columnName;
+        public final List<String> columnName;
 
-        public IndexInfo(String tableName, String columnName) {
+        public IndexInfo(String tableName, List<String> columnName) {
             this.tableName = tableName;
             this.columnName = columnName;
         }
@@ -59,7 +62,7 @@ public class DbInfo implements Serializable {
         this.tbMap.get(tbName).removeColumn(colName);
     }
 
-    public void createIndex(String indexName, String tbName, String colName) {
+    public void createIndex(String indexName, String tbName, List<String> colName) {
         if (this.index.containsKey(indexName))
             throw new RuntimeException(String.format("Index named :%s already exists", indexName));
         this.index.put(indexName, new IndexInfo(tbName, colName));

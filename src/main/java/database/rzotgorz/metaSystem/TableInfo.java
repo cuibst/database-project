@@ -59,31 +59,28 @@ public class TableInfo implements Serializable {
             objects.put(entry.getKey(), entry.getValue().getDescription());
             header.add(entry.getKey());
         }
-//        for (String value : this.primary) {
-//            objects.get(value)[3] = "PRI";
-//        }
         List<String[]> keysInfo = new ArrayList<>();
         String[] pri = new String[header.size()];
-        for(int i=0;i<header.size();i++)
+        for (int i = 0; i < header.size(); i++)
             pri[i] = "";
         pri[0] = "PRIMARY";
-        for(String value : primary) {
+        for (String value : primary) {
             pri[header.indexOf(value)] = "x";
         }
         keysInfo.add(pri);
         foreign.forEach((s, foreignKey) -> {
             String[] info = new String[header.size()];
-            for(int i=0;i<header.size();i++)
+            for (int i = 0; i < header.size(); i++)
                 info[i] = "";
             info[0] = String.format("FOREIGN KEY '%s' TO TABLE '%s'", foreignKey.foreignKeyName, foreignKey.targetTable);
-            for(int i=0;i<foreignKey.columns.size();i++) {
+            for (int i = 0; i < foreignKey.columns.size(); i++) {
                 info[header.indexOf(foreignKey.columns.get(i))] = foreignKey.targetColumns.get(i);
             }
             keysInfo.add(info);
         });
         unique.forEach((name, uni) -> {
             String[] info = new String[header.size()];
-            for(int i=0;i<header.size();i++)
+            for (int i = 0; i < header.size(); i++)
                 info[i] = "";
             info[0] = String.format("UNIQUE %s", name);
             uni.forEach(column -> info[header.indexOf(column)] = "o");
