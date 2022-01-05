@@ -220,7 +220,7 @@ public class FileIndex {
         this.rootNode.remove(key, rid);
     }
 
-    public RID search(IndexContent key) {
+    public List<RID> search(IndexContent key) {
         return this.rootNode.search(key);
     }
 

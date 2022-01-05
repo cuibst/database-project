@@ -172,6 +172,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
             if (bundle.primaryKey != null)
                 controller.setPrimary(tableName, bundle.primaryKey);
         } catch (Exception e) {
+            e.printStackTrace();
             return new MessageResult(e.getMessage(), true);
         }
         return new MessageResult("ok");
@@ -332,12 +333,10 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     public Object visitAlter_add_index(SQLParser.Alter_add_indexContext ctx) {
         String tableName = ctx.Identifier().getText();
         List<String> columns = ((PrimaryKey)ctx.identifiers().accept(this)).fields;
-        for (String column : columns) {
-            try {
-                controller.createIndex(tableName + "." + column, tableName, column);
-            } catch (Exception e) {
-                return new MessageResult(e.getMessage(), true);
-            }
+        try {
+            controller.createIndex(tableName + "." + columns, tableName, columns);
+        } catch (Exception e) {
+            return new MessageResult(e.getMessage(), true);
         }
         return new OperationResult("added", columns.size());
     }

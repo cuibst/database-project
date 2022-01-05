@@ -1,6 +1,7 @@
 package database.rzotgorz.managesystem;
 
 import database.rzotgorz.indexsystem.FileIndex;
+import database.rzotgorz.indexsystem.IndexContent;
 import database.rzotgorz.indexsystem.IndexManager;
 import database.rzotgorz.managesystem.clauses.*;
 import database.rzotgorz.managesystem.functions.*;
@@ -208,10 +209,8 @@ public class DatabaseController {
                 throw new RuntimeException(String.format("Duplicated keys for %s", data));
         }
         pack.handler.addUnique(pack.info, constraintName, columns);
-        for(String column : columns) {
-            if(!pack.info.existsIndex(column))
-                createIndex(tableName + "." + column, tableName, column);
-        }
+        if(!pack.info.existsIndex(tableName + "." + columns))
+            createIndex(tableName + "." + columns, tableName, columns);
     }
 
     public void addForeignKeyConstraint(String tableName, SQLTreeVisitor.ForeignKey foreignKey) throws Exception {
@@ -232,10 +231,10 @@ public class DatabaseController {
                 throw new RuntimeException(String.format("Foreign Key for %s cannot find matching result.", data.toString()));
         }
         pack.handler.addForeign(tableName, foreignKey);
-        for (String column : foreignKey.targetColumns) {
-            if (!pack.handler.existsIndex(tableName + "." + column) && pack.info.getColumns().get(column).getType().equals("INT"))
-                createIndex(foreignKey.targetTable + "." + column, foreignKey.targetTable, column);
-        }
+        if(!pack.handler.existsIndex(tableName + "." + foreignKey.columns))
+            createIndex(tableName + "." + foreignKey.columns, tableName, foreignKey.columns);
+        if(!targetPack.handler.existsIndex(foreignKey.targetTable + "." + foreignKey.targetColumns))
+            createIndex(foreignKey.targetTable + "." + foreignKey.targetColumns, foreignKey.targetTable, foreignKey.targetColumns);
     }
 
     public void setPrimary(String tableName, SQLTreeVisitor.PrimaryKey primaryKey) throws Exception {
@@ -252,10 +251,8 @@ public class DatabaseController {
         pack.handler.setPrimary(tableName, primaryKey == null ? null : primaryKey.fields);
         if (primaryKey == null)
             return;
-        for (String column : primaryKey.fields) {
-            if (!pack.handler.existsIndex(tableName + "." + column) && pack.info.getColumns().get(column).getType().equals("INT"))
-                createIndex(tableName + "." + column, tableName, column);
-        }
+        if(!pack.handler.existsIndex(tableName + "." + primaryKey.fields))
+            createIndex(tableName + "." + primaryKey.fields, tableName, primaryKey.fields);
     }
 
     public void removePrimary(String tableName) {
@@ -263,10 +260,7 @@ public class DatabaseController {
             throw new RuntimeException("No database is being used!");
         MetaHandler metaHandler = metaManager.openMeta(currentUsingDatabase);
         List<String> key = metaHandler.getTable(tableName).getPrimary();
-//        key.forEach(column -> {
-//            if (metaHandler.existsIndex(tableName + "." + column))
-//                removeIndex(tableName + "." + column);
-//        });
+        removeIndex(tableName + "." + key);
     }
 
     public void removeForeignKeyConstraint(String tableName, String constraintName) {
@@ -274,33 +268,45 @@ public class DatabaseController {
             throw new RuntimeException("No database is being used!");
         MetaHandler metaHandler = metaManager.openMeta(currentUsingDatabase);
         SQLTreeVisitor.ForeignKey key = metaHandler.getTable(tableName).getForeign().get(constraintName);
-//        key.targetColumns.forEach(column -> {
-//            removeIndex(key.targetTable + "." + column);
-//        });
+        removeIndex(tableName + "." + key.columns);
+        removeIndex(key.targetTable + "." + key.targetColumns);
         metaHandler.removeForeign(tableName, constraintName);
     }
 
-    public void createIndex(String indexName, String tableName, String columnName) throws Exception {
+    public void createIndex(String indexName, String tableName, List<String> columnName) throws Exception {
         InfoAndHandler pack = getTableInfo(tableName);
         log.info(indexName);
         if (pack.handler.existsIndex(indexName))
             throw new RuntimeException(String.format("Indices %s already exists!", indexName));
-        if (pack.info.existsIndex(columnName)) {
+        if (pack.info.existsIndex(columnName.toString())) {
             pack.handler.createIndex(indexName, tableName, columnName);
             return;
         }
-        FileIndex index = indexManager.createIndex(currentUsingDatabase, tableName);
+        List<String> indexType = new ArrayList<>();
+        List<Integer> columnId = new ArrayList<>();
+        columnName.forEach(column -> {
+            String type = pack.info.getColumns().get(column).getType();
+            if(type.equals("VARCHAR"))
+                indexType.add(String.format("%s(%d)", type, pack.info.getColumns().get(column).getSize()));
+            else
+                indexType.add(type);
+            Integer id = pack.info.getIndex(column);
+            if(id == null)
+                throw new RuntimeException(String.format("Column %s not exists", column));
+        });
+
+
+        FileIndex index = indexManager.createIndex(currentUsingDatabase, tableName, indexType);
         pack.info.createIndex(columnName, index.getRootId());
-        Integer columnId = pack.info.getIndex(columnName);
-        if (columnId == null)
-            throw new RuntimeException(String.format("Column %s not exists", columnName));
         FileHandler fileHandler = recordManager.openFile(getTablePath(tableName));
         FileScanner fileScanner = new FileScanner(fileHandler);
         for (Record record : fileScanner) {
             List<Object> data = pack.info.loadRecord(record);
-            Object key = data.get(columnId);
-            long keyId = (Long) key;
-            index.insert(keyId, record.getRid());
+            List<Comparable> content = new ArrayList<>();
+            columnId.forEach(id -> {
+                content.add((Comparable) data.get(id));
+            });
+            index.insert(new IndexContent(content), record.getRid());
         }
         pack.handler.createIndex(indexName, tableName, columnName);
     }
@@ -381,7 +387,7 @@ public class DatabaseController {
         clauses.forEach(clause -> {
             if ((!(clause instanceof ValueOperatorClause)) || (clause.getTableName() != null && !clause.getTableName().equals(tableName)))
                 return;
-            Integer index = pack.info.getRootId(clause.getColumnName());
+            Integer index = pack.info.getRootId(new ArrayList<>(List.of(clause.getColumnName())));
             if (index != null && pack.info.existsIndex(clause.getColumnName())) {
                 String operator = ((ValueOperatorClause) clause).getOperator();
                 String columnName = clause.getColumnName();
@@ -416,14 +422,16 @@ public class DatabaseController {
         });
         Set<RID> result = null;
         for (Map.Entry<String, Interval> entry : indexMap.entrySet()) {
-            FileIndex index = indexManager.openedIndex(currentUsingDatabase, tableName, pack.info.getRootId(entry.getKey()));
+            FileIndex index = indexManager.openedIndex(currentUsingDatabase, tableName, pack.info.getRootId(new ArrayList<>(List.of(entry.getKey()))));
+            IndexContent lower = new IndexContent(new ArrayList<>(List.of(entry.getValue().lower)));
+            IndexContent upper = new IndexContent(new ArrayList<>(List.of(entry.getValue().upper)));
             if (result == null) {
-                ArrayList<RID> res = index.range(entry.getValue().lower, entry.getValue().upper);
+                ArrayList<RID> res = index.range(lower, upper);
                 if(res == null)
                     return null;
-                (result = new HashSet<>()).addAll(Set.copyOf(index.range(entry.getValue().lower, entry.getValue().upper)));
+                (result = new HashSet<>()).addAll(Set.copyOf(index.range(lower, upper)));
             } else
-                result.retainAll(index.range(entry.getValue().lower, entry.getValue().upper));
+                result.retainAll(index.range(lower, upper));
         }
         return result;
     }
@@ -467,6 +475,21 @@ public class DatabaseController {
     }
 
     public boolean checkAnyUnique(String tableName, List<String> columns, List<Object> values, RID currentRow) throws UnsupportedEncodingException {
+        InfoAndHandler infoPack = getTableInfo(tableName);
+        if(infoPack.info.getRootId(columns) != null) {
+
+            int rootId = infoPack.info.getRootId(columns);
+            FileIndex index = indexManager.openedIndex(currentUsingDatabase, tableName, rootId);
+            List<Comparable> value = new ArrayList<>();
+            DbInfo.IndexInfo info = infoPack.handler.getDbInfo().getIndexInfo(columns.toString());
+            info.columnName.forEach(column -> {
+                value.add((Comparable) values.get(infoPack.info.getIndex(column)));
+            });
+            List<RID> rids = index.search(new IndexContent(value));
+            if(rids.isEmpty())
+                return false;
+            return rids.size() != 1 || !rids.contains(currentRow);
+        }
         List<WhereClause> clauses = new ArrayList<>();
         for (int i = 0; i < columns.size(); i++) {
             clauses.add(new ValueOperatorClause(tableName, columns.get(i), "=", values.get(i)));
@@ -561,28 +584,32 @@ public class DatabaseController {
         byte[] data = pack.info.buildRecord(stringList);
         FileHandler fileHandler = recordManager.openFile(getTablePath(tableName));
         Record rid = fileHandler.insertRecord(data);
-        insertIndices(pack.info, currentUsingDatabase, valueList, rid.getRid());
+        insertIndices(tableName, currentUsingDatabase, valueList, rid.getRid());
     }
 
-    public void insertIndices(TableInfo tableInfo, String databaseName, List<Object> values, RID rid) {
-        tableInfo.getIndicesMap().forEach((indexColumn, rootId) -> {
-            FileIndex index = indexManager.openedIndex(databaseName, tableInfo.getName(), rootId);
-            int columnId = tableInfo.getIndex(indexColumn);
-            if (values.get(columnId) != null)
-                index.insert((Integer) values.get(columnId), rid);
-            else
-                index.insert(Long.MIN_VALUE, rid);
+    public void insertIndices(String tableName, String databaseName, List<Object> values, RID rid) {
+        InfoAndHandler pack = getTableInfo(tableName);
+        pack.info.getIndicesMap().forEach((indexName, rootId) -> {
+            DbInfo.IndexInfo info = pack.handler.getDbInfo().getIndexInfo(indexName);
+            List<Comparable> value = new ArrayList<>();
+            info.columnName.forEach(column -> {
+                value.add((Comparable) values.get(pack.info.getIndex(column)));
+            });
+            FileIndex index = indexManager.openedIndex(databaseName, tableName, rootId);
+            index.insert(new IndexContent(value), rid);
         });
     }
 
-    public void deleteIndices(TableInfo tableInfo, String databaseName, List<Object> values, RID rid) {
-        tableInfo.getIndicesMap().forEach((indexColumn, rootId) -> {
-            FileIndex index = indexManager.openedIndex(databaseName, tableInfo.getName(), rootId);
-            int columnId = tableInfo.getIndex(indexColumn);
-            if (values.get(columnId) != null)
-                index.remove((Integer) values.get(columnId), rid);
-            else
-                index.remove(Long.MIN_VALUE, rid);
+    public void deleteIndices(String tableName, String databaseName, List<Object> values, RID rid) {
+        InfoAndHandler pack = getTableInfo(tableName);
+        pack.info.getIndicesMap().forEach((indexName, rootId) -> {
+            DbInfo.IndexInfo info = pack.handler.getDbInfo().getIndexInfo(indexName);
+            List<Comparable> value = new ArrayList<>();
+            info.columnName.forEach(column -> {
+                value.add((Comparable) values.get(pack.info.getIndex(column)));
+            });
+            FileIndex index = indexManager.openedIndex(databaseName, tableName, rootId);
+            index.remove(new IndexContent(value), rid);
         });
     }
 
