@@ -80,14 +80,19 @@ public class LeafNode extends TreeNode {
         return 40 + childKeys.size() * (this.typeSize + 16) + 32;
     }
 
-    public RID search(IndexContent key) {
-        int index = lowerBound(key);
-        if (index == -1 || index == childKeys.size())
+    public List<RID> search(IndexContent key) {
+        int low = lowerBound(key);
+        int high = upperBound(key);
+        if (low == -1 || low == childKeys.size())
             return null;
-        if (childKeys.get(index) == key)
-            return childRids.get(index);
-        else
+        if (high == -1 || high == childKeys.size())
             return null;
+        List<RID> list = new ArrayList<>();
+        for (int i = low; i <= high; i++) {
+            if (childKeys.get(i) == key)
+                list.add(childRids.get(i));
+        }
+        return list;
     }
 
     public byte[] turnToBytes() {

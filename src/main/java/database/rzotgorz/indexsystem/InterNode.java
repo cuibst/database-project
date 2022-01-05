@@ -146,11 +146,22 @@ public class InterNode extends TreeNode {
     }
 
     @Override
-    public RID search(IndexContent key) {
-        int index = lowerBound(key);
-        if (index == childNodes.size())
-            index--;
-        return childNodes.get(index).search(key);
+    public List<RID> search(IndexContent key) {
+        int low = lowerBound(key);
+        int high = upperBound(key);
+        List<RID> list = new ArrayList<>();
+        if (low == childNodes.size())
+            low--;
+        if (high == childNodes.size())
+            high--;
+        if (high == -1)
+            return null;
+        for (int i = low; i < high; i++) {
+            List<RID> list1 = childNodes.get(i).search(key);
+            if (list1 != null)
+                list.addAll(list1);
+        }
+        return list;
     }
 
     public int getChildKeysSize() {
