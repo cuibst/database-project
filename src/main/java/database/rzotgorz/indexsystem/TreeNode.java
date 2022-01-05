@@ -113,7 +113,7 @@ public class TreeNode {
         return null;
     }
 
-    public RID search(IndexContent key) {
+    public List<RID> search(IndexContent key) {
         log.info("ERROR!!! invalid funciton used in base class");
         return null;
     }
