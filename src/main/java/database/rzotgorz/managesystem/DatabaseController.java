@@ -14,6 +14,8 @@ import database.rzotgorz.recordsystem.Record;
 import database.rzotgorz.recordsystem.RecordManager;
 import database.rzotgorz.utils.Csv;
 import database.rzotgorz.utils.FileScanner;
+import database.rzotgorz.utils.Pair;
+import database.rzotgorz.utils.UnionFindSet;
 import lombok.extern.slf4j.Slf4j;
 import org.antlr.v4.runtime.Parser;
 import org.antlr.v4.runtime.*;
@@ -672,6 +674,121 @@ public class DatabaseController {
         return new OperationResult("dump", 1);
     }
 
+    public TableResult bruteForceJoin(Map<String, TableResult> resultMap, List<WhereClause> clauses) {
+        //Step1: create edge map
+        Map<Pair<String, String>, List<Pair<String, String>>> edgeMap = new HashMap<>();
+        clauses.forEach(clause -> {
+            if(!(clause instanceof ColumnOperatorClause))
+                return;
+            ColumnOperatorClause subClause = (ColumnOperatorClause) clause;
+            if(clause.getTableName().equals(clause.getTargetTable()))
+                return;
+            if(!subClause.getOperator().equals("="))
+                throw new RuntimeException("Cross-table comparison must be equal.");
+            Pair<String, String> tablePair;
+            Pair<String, String> columnPair;
+            if(clause.getTableName().compareTo(clause.getTargetTable()) < 0) {
+                tablePair = new Pair<>(clause.getTableName(), clause.getTargetTable());
+                columnPair = new Pair<>(clause.getColumnName(), clause.getTargetColumn());
+            } else {
+                tablePair = new Pair<>(clause.getTargetTable(), clause.getTableName());
+                columnPair = new Pair<>(clause.getTargetColumn(), clause.getColumnName());
+            }
+            if(edgeMap.containsKey(tablePair))
+                edgeMap.get(tablePair).add(columnPair);
+            else
+                edgeMap.put(tablePair, new ArrayList<>(List.of(columnPair)));
+        });
+
+        //Step2: Join constraint-based tables
+        UnionFindSet<String> unionFindSet = new UnionFindSet<>(resultMap.keySet());
+
+        Map<String, TableResult> mergedMap = new HashMap<>(Map.copyOf(resultMap));
+
+        edgeMap.forEach((tablePair, constraints) -> {
+            String outer = unionFindSet.getRoot(tablePair.first);
+            String inner = unionFindSet.getRoot(tablePair.second);
+            if(outer.equals(inner)) {
+                List<List<Object>> nextResult = new ArrayList<>();
+                mergedMap.get(outer).getData().forEach(record -> {
+                    boolean flag = true;
+                    for (Pair<String, String> columnPair : constraints) {
+                        String outerColumn = tablePair.first + '.' + columnPair.first;
+                        String innerColumn = tablePair.second + '.' + columnPair.second;
+                        int outerId = mergedMap.get(outer).getHeaderIndex(outerColumn);
+                        int innerId = mergedMap.get(outer).getHeaderIndex(innerColumn);
+                        if(!record.get(outerId).equals(record.get(innerId))) {
+                            flag = false;
+                            break;
+                        }
+                    }
+                    if(flag)
+                        nextResult.add(record);
+                });
+                mergedMap.replace(outer, new TableResult(mergedMap.get(outer).getHeaders(), nextResult));
+            } else {
+                List<String> nextHeader = new ArrayList<>();
+                List<List<Object>> nextData = new ArrayList<>();
+                nextHeader.addAll(mergedMap.get(outer).getHeaders());
+                nextHeader.addAll(mergedMap.get(inner).getHeaders());
+                mergedMap.get(outer).getData().forEach(outerRecord -> {
+                    mergedMap.get(inner).getData().forEach(innerRecord -> {
+                        boolean flag = true;
+                        for (Pair<String, String> columnPair : constraints) {
+                            String outerColumn = tablePair.first + '.' + columnPair.first;
+                            String innerColumn = tablePair.second + '.' + columnPair.second;
+                            int outerId = mergedMap.get(outer).getHeaderIndex(outerColumn);
+                            int innerId = mergedMap.get(inner).getHeaderIndex(innerColumn);
+                            if(!outerRecord.get(outerId).equals(innerRecord.get(innerId))) {
+                                flag = false;
+                                break;
+                            }
+                        }
+                        if(flag) {
+                            List<Object> concatRecord = new ArrayList<>();
+                            concatRecord.addAll(outerRecord);
+                            concatRecord.addAll(innerRecord);
+                            nextData.add(concatRecord);
+                        }
+                    });
+                });
+                String newFather = unionFindSet.addEdge(outer, inner);
+                mergedMap.replace(newFather, new TableResult(nextHeader, nextData));
+            }
+        });
+
+        //Step3: Join table without constraints
+        List<TableResult> remainResult = new ArrayList<>();
+        Set<String> mark = new HashSet<>();
+        resultMap.keySet().forEach(key -> {
+            String fkey = unionFindSet.getRoot(key);
+            if(mark.contains(fkey))
+                return;
+            mark.add(fkey);
+            remainResult.add(mergedMap.get(fkey));
+        });
+        while(remainResult.size() > 1) {
+            TableResult inner = remainResult.get(0);
+            TableResult outer = remainResult.get(1);
+            List<String> nextHeader = new ArrayList<>();
+            List<List<Object>> nextData = new ArrayList<>();
+            nextHeader.addAll(outer.getHeaders());
+            nextHeader.addAll(inner.getHeaders());
+            outer.getData().forEach(outerRecord -> {
+                inner.getData().forEach(innerRecord -> {
+                    List<Object> concatRecord = new ArrayList<>();
+                    concatRecord.addAll(outerRecord);
+                    concatRecord.addAll(innerRecord);
+                    nextData.add(concatRecord);
+                });
+            });
+            remainResult.remove(0);
+            remainResult.remove(0);
+            remainResult.add(new TableResult(nextHeader, nextData));
+        }
+        return remainResult.get(0);
+    }
+
     public ResultItem selectRecord(List<Selector> selectors, List<String> tableNames, List<WhereClause> clauses, SQLTreeVisitor.Column group) {
         if (currentUsingDatabase == null)
             throw new RuntimeException("No database is being used!");
@@ -726,8 +843,7 @@ public class DatabaseController {
             throw new RuntimeException("No group specified, can't resolve both aggregation and field");
 
         Map<String, TableResult> resultMap = new HashMap<>();
-        for (
-                String tableName : tableNames) {
+        for (String tableName : tableNames) {
             try {
                 resultMap.put(tableName, scanIndices(tableName, clauses));
             } catch (UnsupportedEncodingException e) {
@@ -735,8 +851,13 @@ public class DatabaseController {
             }
         }
 
+        TableResult result;
         //FIXME: deal with join later on.
-        TableResult result = resultMap.get(tableNames.get(0));
+        if(tableNames.size() == 1)
+            result = resultMap.get(tableNames.get(0));
+        else {
+            result = bruteForceJoin(resultMap, clauses);
+        }
         List<String> headers;
         List<List<Object>> actualData = new ArrayList<>();
         if (group != null) {
