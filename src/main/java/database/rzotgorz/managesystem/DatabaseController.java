@@ -481,7 +481,11 @@ public class DatabaseController {
         if (pack.info.getPrimary().size() == 0)
             return false;
         List<Object> checkValues = new ArrayList<>();
-        pack.info.getPrimary().forEach(primary -> checkValues.add(values.get(pack.info.getIndex(primary))));
+        pack.info.getPrimary().forEach(primary -> {
+            checkValues.add(values.get(pack.info.getIndex(primary)));
+            if(values.get(pack.info.getIndex(primary)) == null)
+                throw new RuntimeException("Primary key found NULL value.");
+        });
         return checkAnyUnique(tableName, pack.info.getPrimary(), checkValues, currentRow);
     }
 
@@ -500,24 +504,25 @@ public class DatabaseController {
         return false;
     }
 
-    public boolean checkForeignKeyConstraint(String tableName, List<Object> values) {
+    public boolean checkForeignKeyConstraint(String tableName, List<Object> values) throws UnsupportedEncodingException {
         InfoAndHandler pack = getTableInfo(tableName);
         if (pack.info.getForeign().size() == 0)
             return false;
         for (Map.Entry<String, SQLTreeVisitor.ForeignKey> entry : pack.info.getForeign().entrySet()) {
             List<String> columns = entry.getValue().columns;
+            SQLTreeVisitor.ForeignKey foreignKey = entry.getValue();
+            List<WhereClause> clauses = new ArrayList<>();
             for (int i = 0; i < columns.size(); i++) {
                 String column = columns.get(i);
                 String targetColumn = entry.getValue().targetColumns.get(i);
-                SQLTreeVisitor.ForeignKey foreignKey = entry.getValue();
                 Object value = values.get(pack.info.getIndex(column));
-                TableInfo foreignTable = pack.handler.getTable(foreignKey.targetTable);
-                int foreignIndexId = foreignTable.getRootId(targetColumn);
-                FileIndex index = indexManager.openedIndex(currentUsingDatabase, foreignKey.targetTable, foreignIndexId);
-                List<RID> result = index.range((Integer) value, (Integer) value);
-                if (result == null || result.size() == 0)
-                    return true;
+                if(value == null)
+                    throw new RuntimeException("Foreign key can't have null value.");
+                clauses.add(new ValueOperatorClause(foreignKey.targetTable, targetColumn, "=", value));
             }
+            RecordDataPack recordDataPack = searchIndices(foreignKey.targetTable, clauses);
+            if(recordDataPack.records == null || recordDataPack.records.size() == 0)
+                return true;
         }
         return false;
     }
@@ -547,7 +552,12 @@ public class DatabaseController {
         InfoAndHandler pack = getTableInfo(tableName);
         checkConstraints(tableName, valueList, null);
         List<String> stringList = new ArrayList<>();
-        valueList.forEach(obj -> stringList.add(obj.toString()));
+        valueList.forEach(obj -> {
+            if(obj != null)
+                stringList.add(obj.toString());
+            else
+                stringList.add(null);
+        });
         byte[] data = pack.info.buildRecord(stringList);
         FileHandler fileHandler = recordManager.openFile(getTablePath(tableName));
         Record rid = fileHandler.insertRecord(data);
