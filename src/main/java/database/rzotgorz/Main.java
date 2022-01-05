@@ -1,5 +1,6 @@
 package database.rzotgorz;
 
+import database.rzotgorz.indexsystem.IndexContent;
 import database.rzotgorz.managesystem.DatabaseController;
 import database.rzotgorz.managesystem.SQLTreeVisitor;
 import database.rzotgorz.managesystem.results.MessageResult;
@@ -25,7 +26,7 @@ import org.jline.terminal.TerminalBuilder;
 import java.io.*;
 import java.nio.file.NotDirectoryException;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.List;
 
 @Slf4j
 public class Main {
@@ -49,12 +50,23 @@ public class Main {
     }
 
     public static void main(String[] args) throws IOException {
+        List<Comparable> list = new ArrayList<>();
+        List<Comparable> list1 = new ArrayList<>();
+        list.add(1);
+        list.add(2);
+        list.add("1");
+        list1.add(1);
+        list1.add(2);
+        list1.add("0");
+        IndexContent indexContent = new IndexContent();
+        indexContent.setIndexList(list);
+        log.info(String.valueOf(indexContent.compareTo(list1)));
 
         InputStream in = System.in;
         PrintStream out = System.out;
 
-        if(args.length != 0) {
-            if(args.length == 1) {
+        if (args.length != 0) {
+            if (args.length == 1) {
                 in = new FileInputStream(args[0]);
             } else {
                 in = new FileInputStream(args[0]);
@@ -72,7 +84,7 @@ public class Main {
         }
 
         Terminal terminal;
-        if(in.equals(System.in))
+        if (in.equals(System.in))
             terminal = TerminalBuilder.builder().system(true).build();
         else
             terminal = TerminalBuilder.builder().system(false).streams(in, System.out).build();
@@ -180,7 +192,7 @@ public class Main {
             }
             line.append(currentLine);
             if (line.toString().equals("exit")) {
-                System.out.println("bye!");
+                System.out.println("(。・_・)/~~~ bye!");
                 break;
             }
             if (currentLine.stripTrailing().endsWith(";")) {
@@ -207,10 +219,10 @@ public class Main {
                     else
                         out.println();
                     out.println(resultItem);
-                    if(out.equals(System.out))
+                    if (out.equals(System.out))
                         out.println("Result received in " + resultItem.cost + "ms.");
                 }
-                if(!out.equals(System.out))
+                if (!out.equals(System.out))
                     out.println();
             }
         }
