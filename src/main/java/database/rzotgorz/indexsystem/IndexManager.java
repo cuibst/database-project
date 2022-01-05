@@ -5,6 +5,8 @@ import database.rzotgorz.filesystem.FileManager;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -60,9 +62,17 @@ public class IndexManager {
         }
     }
 
-    public FileIndex createIndex(String dbName, String tableName, List<String> indexType) {
+    public FileIndex createIndex(String dbName, String tableName, List<String> indexType, String indexName) {
         IndexHandler handler = getHandler(dbName);
-        FileIndex fileIndex = new FileIndex(handler.createNewPage(), handler, dbName, indexType);
+        FileIndex fileIndex = new FileIndex(handler.createNewPage(), handler, dbName, indexType, tableName, indexName);
+        try {
+            String path = "data" + File.separator + dbName + File.separator + tableName + indexName + ".type";
+            File file = new File(path);
+            if (!file.exists())
+                file.createNewFile();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         fileIndex.dump();
         JSONObject object = new JSONObject();
         object.put("rootId", fileIndex.getRootId());
@@ -71,15 +81,14 @@ public class IndexManager {
         return fileIndex;
     }
 
-    public FileIndex openedIndex(String dbName, String tableName, int rootId) {
+    public FileIndex openedIndex(String dbName, String tableName, int rootId, String indexName) {
         JSONObject object = new JSONObject();
         object.put("rootId", rootId);
         object.put("tableName", tableName);
         if (openedFileIndex.containsKey(object))
             return openedFileIndex.get(object);
         IndexHandler handler = getHandler(dbName);
-        FileIndex fileIndex = new FileIndex(rootId, handler, dbName);
-//        fileIndex.load();
+        FileIndex fileIndex = new FileIndex(rootId, handler, dbName, tableName, indexName);
         openedFileIndex.put(object, fileIndex);
         return fileIndex;
     }

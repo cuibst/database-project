@@ -22,6 +22,8 @@ public class FileIndex {
     private TreeNode rootNode;
     private List<String> indexType;
     private String dbName;
+    private String indexName;
+    private String tableName;
     private static final ResourceBundle bundle = ResourceBundle.getBundle("configurations");
     private static final int PAGE_SIZE = Integer.parseInt(bundle.getString("PAGE_SIZE"));
     private int typeSize;
@@ -50,21 +52,25 @@ public class FileIndex {
         return longData;
     }
 
-    public FileIndex(int rootId, IndexHandler handler, String dbName, List<String> types) {
+    public FileIndex(int rootId, IndexHandler handler, String dbName, List<String> types, String tableName, String indexName) {
         this.rootId = rootId;
+        this.tableName = tableName;
         this.modified = false;
         this.indexHandler = handler;
         this.dbName = dbName;
         this.indexType = types;
         this.typeSize = IndexUtility.calcSize(types);
+        this.indexName = indexName;
         this.rootNode = new InterNode(rootId, -1, new ArrayList<>(), new ArrayList<>(), indexHandler, this.typeSize, this.indexType);
     }
 
-    public FileIndex(int rootId, IndexHandler handler, String dbName) {
+    public FileIndex(int rootId, IndexHandler handler, String dbName, String tableName, String indexName) {
+        this.tableName = tableName;
         this.rootId = rootId;
         this.modified = false;
         this.indexHandler = handler;
         this.dbName = dbName;
+        this.indexName = indexName;
         this.load();
         this.rootNode = new InterNode(rootId, -1, new ArrayList<>(), new ArrayList<>(), indexHandler, this.typeSize, this.indexType);
     }
@@ -155,7 +161,7 @@ public class FileIndex {
         long parentId = data[1];
         assert (nodeType == 0);
         assert (parentId == -1);
-        String typePath = dbName + File.separator + dbName + ".type";
+        String typePath = "data" + File.separator + dbName + File.separator + tableName + indexName + ".type";
         File file = new File(typePath);
         try {
             FileInputStream fis = new FileInputStream(file);
@@ -188,7 +194,7 @@ public class FileIndex {
 
     public void dump() {
         List<TreeNode> needHandle = new ArrayList<>();
-        String typePath = dbName + File.separator + dbName + ".type";
+        String typePath = "data" + File.separator + dbName + File.separator + tableName + indexName + ".type";
         File file = new File(typePath);
         try {
             FileOutputStream fis = new FileOutputStream(file);
