@@ -16,6 +16,8 @@ public class ValueCompare implements Function{
     @Override
     public boolean consume(List<Object> record) {
         Object target = record.get(index);
+        if(target == null)
+            return false;
         switch (operator) {
             case "=":
                 return target.equals(value);

@@ -54,7 +54,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
                     results.add(result);
                 }
             } catch (Exception e) {
-//                e.printStackTrace();
+                e.printStackTrace();
                 ResultItem errorResult = new MessageResult(e.getMessage(), true);
                 errorResult.cost = getTimeDelta();
                 results.add(errorResult);
