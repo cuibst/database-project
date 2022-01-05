@@ -23,8 +23,8 @@ public class IndexUtility {
             } else if (list.get(i).contains("FLOAT")) {
                 size += 5;
             } else if (list.get(i).contains("VARCHAR")) {
-                list.get(i).replace(")", "");
-                String[] s = list.get(i).split("\\(");
+                String str = list.get(i).replace(")", "");
+                String[] s = str.split("\\(");
                 size += Integer.parseInt(s[1]) + 1;
             }
         }
@@ -33,8 +33,8 @@ public class IndexUtility {
 
     static public int getStringSize(String s) {
         int size;
-        s.replace(")", "");
-        String[] s1 = s.split("\\(");
+        String s2 = s.replace(")", "");
+        String[] s1 = s2.split("\\(");
         size = Integer.parseInt(s1[1]);
         return size;
     }
@@ -52,7 +52,11 @@ public class IndexUtility {
                 } else {
                     data[head] = 1;
                     head++;
-                    byte[] res = ByteLongConverter.long2Bytes((long) content.getIndexList().get(i));
+                    byte[] res;
+                    if(content.getIndexList().get(i) instanceof Integer)
+                        res = ByteLongConverter.long2Bytes((int) content.getIndexList().get(i));
+                    else
+                        res = ByteLongConverter.long2Bytes((long) content.getIndexList().get(i));
                     System.arraycopy(res, 0, data, head, 8);
                 }
                 head += 8;

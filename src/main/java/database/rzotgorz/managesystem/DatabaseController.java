@@ -296,7 +296,7 @@ public class DatabaseController {
         });
 
 
-        FileIndex index = indexManager.createIndex(currentUsingDatabase, tableName, indexType);
+        FileIndex index = indexManager.createIndex(currentUsingDatabase, tableName, indexType, columnName.toString());
         pack.info.createIndex(columnName, index.getRootId());
         FileHandler fileHandler = recordManager.openFile(getTablePath(tableName));
         FileScanner fileScanner = new FileScanner(fileHandler);
@@ -422,7 +422,7 @@ public class DatabaseController {
         });
         Set<RID> result = null;
         for (Map.Entry<String, Interval> entry : indexMap.entrySet()) {
-            FileIndex index = indexManager.openedIndex(currentUsingDatabase, tableName, pack.info.getRootId(new ArrayList<>(List.of(entry.getKey()))));
+            FileIndex index = indexManager.openedIndex(currentUsingDatabase, tableName, pack.info.getRootId(new ArrayList<>(List.of(entry.getKey()))), new ArrayList<>(List.of(entry.getKey())).toString());
             IndexContent lower = new IndexContent(new ArrayList<>(List.of(entry.getValue().lower)));
             IndexContent upper = new IndexContent(new ArrayList<>(List.of(entry.getValue().upper)));
             if (result == null) {
@@ -476,20 +476,24 @@ public class DatabaseController {
 
     public boolean checkAnyUnique(String tableName, List<String> columns, List<Object> values, RID currentRow) throws UnsupportedEncodingException {
         InfoAndHandler infoPack = getTableInfo(tableName);
+        log.info(infoPack.info.getIndicesMap().toString());
         if(infoPack.info.getRootId(columns) != null) {
-
+            log.info("Using index");
             int rootId = infoPack.info.getRootId(columns);
-            FileIndex index = indexManager.openedIndex(currentUsingDatabase, tableName, rootId);
+            FileIndex index = indexManager.openedIndex(currentUsingDatabase, tableName, rootId, columns.toString());
             List<Comparable> value = new ArrayList<>();
-            DbInfo.IndexInfo info = infoPack.handler.getDbInfo().getIndexInfo(columns.toString());
+            DbInfo.IndexInfo info = infoPack.handler.getDbInfo().getIndexInfo(tableName + "." + columns.toString());
             info.columnName.forEach(column -> {
                 value.add((Comparable) values.get(infoPack.info.getIndex(column)));
             });
             List<RID> rids = index.search(new IndexContent(value));
-            if(rids.isEmpty())
+            System.out.println(currentRow);
+            System.out.println(rids);
+            if(rids == null || rids.isEmpty())
                 return false;
             return rids.size() != 1 || !rids.contains(currentRow);
         }
+        log.info("Using brute force");
         List<WhereClause> clauses = new ArrayList<>();
         for (int i = 0; i < columns.size(); i++) {
             clauses.add(new ValueOperatorClause(tableName, columns.get(i), "=", values.get(i)));
@@ -589,13 +593,14 @@ public class DatabaseController {
 
     public void insertIndices(String tableName, String databaseName, List<Object> values, RID rid) {
         InfoAndHandler pack = getTableInfo(tableName);
+        log.info(pack.info.getIndicesMap().toString());
         pack.info.getIndicesMap().forEach((indexName, rootId) -> {
             DbInfo.IndexInfo info = pack.handler.getDbInfo().getIndexInfo(indexName);
             List<Comparable> value = new ArrayList<>();
             info.columnName.forEach(column -> {
                 value.add((Comparable) values.get(pack.info.getIndex(column)));
             });
-            FileIndex index = indexManager.openedIndex(databaseName, tableName, rootId);
+            FileIndex index = indexManager.openedIndex(databaseName, tableName, rootId, info.columnName.toString());
             index.insert(new IndexContent(value), rid);
         });
     }
@@ -608,7 +613,7 @@ public class DatabaseController {
             info.columnName.forEach(column -> {
                 value.add((Comparable) values.get(pack.info.getIndex(column)));
             });
-            FileIndex index = indexManager.openedIndex(databaseName, tableName, rootId);
+            FileIndex index = indexManager.openedIndex(databaseName, tableName, rootId, info.columnName.toString());
             index.remove(new IndexContent(value), rid);
         });
     }

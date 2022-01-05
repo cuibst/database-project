@@ -18,7 +18,7 @@ public class IndexContent implements Comparable {
 
     @Override
     public int compareTo(Object o) {
-        List<Comparable> list = (List<Comparable>) o;
+        List<Comparable> list = ((IndexContent) o).indexList;
         for (int i = 0; i < list.size(); i++) {
             if (list.get(i) == null && indexList.get(i) == null)
                 continue;

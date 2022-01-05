@@ -50,18 +50,6 @@ public class Main {
     }
 
     public static void main(String[] args) throws IOException {
-        List<Comparable> list = new ArrayList<>();
-        List<Comparable> list1 = new ArrayList<>();
-        list.add(1);
-        list.add(2);
-        list.add("1");
-        list1.add(1);
-        list1.add(2);
-        list1.add("0");
-        IndexContent indexContent = new IndexContent();
-        indexContent.setIndexList(list);
-        log.info(String.valueOf(indexContent.compareTo(list1)));
-
         InputStream in = System.in;
         PrintStream out = System.out;
 

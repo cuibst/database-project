@@ -74,7 +74,7 @@ public class TreeNode {
     }
 
     public byte[] processLongsToBytes(Long[] longs) {
-        byte[] bytes = new byte[PAGE_SIZE];
+        byte[] bytes = new byte[longs.length * 8];
         for (int i = 0; i < longs.length; i++) {
             byte[] processByte = ByteLongConverter.long2Bytes(longs[i]);
             for (int j = 0; j < 8; j++) {

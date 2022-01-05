@@ -81,22 +81,28 @@ public class LeafNode extends TreeNode {
     }
 
     public List<RID> search(IndexContent key) {
+        log.info(childRids.toString());
         int low = lowerBound(key);
         int high = upperBound(key);
-        if (low == -1 || low == childKeys.size())
+        log.info("low: {}, high: {}", low, high);
+        if (low == -1)
             return null;
-        if (high == -1 || high == childKeys.size())
+        if (high == -1)
             return null;
+        if(low == childKeys.size())
+            low -= 1;
+        if(high == childKeys.size())
+            high -= 1;
         List<RID> list = new ArrayList<>();
         for (int i = low; i <= high; i++) {
-            if (childKeys.get(i) == key)
+            if (childKeys.get(i).compareTo(key) == 0)
                 list.add(childRids.get(i));
         }
         return list;
     }
 
     public byte[] turnToBytes() {
-        Long[] longs = new Long[PAGE_SIZE / 8];
+        Long[] longs = new Long[5];
         byte[] bytes = new byte[PAGE_SIZE];
         Arrays.fill(longs, 0L);
         longs[0] = 1L;

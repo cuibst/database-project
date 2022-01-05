@@ -186,11 +186,11 @@ public class TableInfo implements Serializable {
     }
 
     public void createIndex(List<String> columns, int rootId) {
-        this.indicesMap.put(name, rootId);
+        this.indicesMap.put(name + "." + columns.toString(), rootId);
     }
 
     public Integer getRootId(List<String> columns) {
-        return this.indicesMap.get(columns.toString());
+        return this.indicesMap.get(name + "." + columns.toString());
     }
 
     public void removeIndex(String name) {
