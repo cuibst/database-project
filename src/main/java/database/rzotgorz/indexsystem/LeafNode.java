@@ -2,6 +2,7 @@ package database.rzotgorz.indexsystem;
 
 import com.alibaba.fastjson.JSONObject;
 import database.rzotgorz.recordsystem.RID;
+import database.rzotgorz.utils.ByteLongConverter;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
@@ -20,9 +21,8 @@ public class LeafNode extends TreeNode {
     private static final ResourceBundle bundle = ResourceBundle.getBundle("configurations");
     private static final int PAGE_SIZE = Integer.parseInt(bundle.getString("PAGE_SIZE"));
 
-    public LeafNode(long pageId, long parentId, long prevId, long nextId, List<RID> childRids, List<IndexContent> childKeys, IndexHandler indexHandler) {
-        super(pageId, parentId, childKeys, indexHandler);
-//        log.info("pageId:{}", pageId);
+    public LeafNode(long pageId, long parentId, long prevId, long nextId, List<RID> childRids, List<IndexContent> childKeys, IndexHandler indexHandler, int size, List<String> list) {
+        super(pageId, parentId, childKeys, indexHandler, size, list);
         this.prevId = prevId;
         this.nextId = nextId;
         this.childRids = childRids;
@@ -77,7 +77,7 @@ public class LeafNode extends TreeNode {
 
     public int pageSize() {
         //FIXME::Why 32???
-        return 40 + childKeys.size() * 24 + 32;
+        return 40 + childKeys.size() * (this.typeSize + 16) + 32;
     }
 
     public RID search(IndexContent key) {
@@ -92,18 +92,29 @@ public class LeafNode extends TreeNode {
 
     public byte[] turnToBytes() {
         Long[] longs = new Long[PAGE_SIZE / 8];
+        byte[] bytes = new byte[PAGE_SIZE];
         Arrays.fill(longs, 0L);
         longs[0] = 1L;
         longs[1] = parentId;
         longs[2] = prevId;
         longs[3] = nextId;
         longs[4] = (long) childRids.size();
+        byte[] headBytes = processLongsToBytes(longs);
+        int head = headBytes.length;
+        System.arraycopy(headBytes, 0, bytes, 0, headBytes.length);
         for (int i = 0; i < childKeys.size(); i++) {
-            longs[i * 3 + 5] = childKeys.get(i);
-            longs[i * 3 + 6] = (long) childRids.get(i).getPageId();
-            longs[i * 3 + 7] = (long) childRids.get(i).getSlotId();
+            byte[] dataBytes;
+            dataBytes = IndexUtility.turnToBytes(this.typeSize, this.childKeys.get(i), this.indexType);
+            System.arraycopy(dataBytes, 0, bytes, head, dataBytes.length);
+            head += this.typeSize;
+            byte[] pageIdByte = ByteLongConverter.long2Bytes(this.childRids.get(i).getPageId());
+            System.arraycopy(pageIdByte, 0, bytes, head, 8);
+            head += 8;
+            byte[] slotIdByte = ByteLongConverter.long2Bytes(this.childRids.get(i).getSlotId());
+            System.arraycopy(slotIdByte, 0, bytes, head, 8);
+            head += 8;
         }
-        return processLongsToBytes(longs);
+        return bytes;
     }
 
     public ArrayList<RID> range(IndexContent low, IndexContent high) {

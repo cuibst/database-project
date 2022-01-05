@@ -20,6 +20,12 @@ public class IndexContent implements Comparable {
     public int compareTo(Object o) {
         List<Comparable> list = (List<Comparable>) o;
         for (int i = 0; i < list.size(); i++) {
+            if (list.get(i) == null && indexList.get(i) == null)
+                continue;
+            if (indexList.get(i) == null)
+                return -1;
+            if (list.get(i) == null)
+                return 1;
             int ans = indexList.get(i).compareTo(list.get(i));
             if (ans != 0)
                 return ans;

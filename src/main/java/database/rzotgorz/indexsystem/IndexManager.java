@@ -60,12 +60,11 @@ public class IndexManager {
         }
     }
 
-    public FileIndex createIndex(String dbName, String tableName) {
+    public FileIndex createIndex(String dbName, String tableName, List<String> indexType) {
         IndexHandler handler = getHandler(dbName);
-        FileIndex fileIndex = new FileIndex(handler.createNewPage(), handler);
+        FileIndex fileIndex = new FileIndex(handler.createNewPage(), handler, dbName, indexType);
         fileIndex.dump();
         JSONObject object = new JSONObject();
-//        log.info("rootId:{}", fileIndex.getRootId());
         object.put("rootId", fileIndex.getRootId());
         object.put("tableName", tableName);
         openedFileIndex.put(object, fileIndex);
@@ -79,8 +78,8 @@ public class IndexManager {
         if (openedFileIndex.containsKey(object))
             return openedFileIndex.get(object);
         IndexHandler handler = getHandler(dbName);
-        FileIndex fileIndex = new FileIndex(rootId, handler);
-        fileIndex.load();
+        FileIndex fileIndex = new FileIndex(rootId, handler, dbName);
+//        fileIndex.load();
         openedFileIndex.put(object, fileIndex);
         return fileIndex;
     }

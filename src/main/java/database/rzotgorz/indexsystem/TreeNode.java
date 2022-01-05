@@ -22,13 +22,17 @@ public class TreeNode {
     protected int nodeType;
     private static final ResourceBundle bundle = ResourceBundle.getBundle("configurations");
     private static final int PAGE_SIZE = Integer.parseInt(bundle.getString("PAGE_SIZE"));
+    protected int typeSize;
+    protected List<String> indexType;
 
 
-    public TreeNode(long pageId, long parentId, List<IndexContent> childKeys, IndexHandler indexHandler) {
+    public TreeNode(long pageId, long parentId, List<IndexContent> childKeys, IndexHandler indexHandler, int size, List<String> indexType) {
         this.pageId = pageId;
         this.childKeys = childKeys;
         this.parentId = parentId;
         this.indexHandler = indexHandler;
+        this.typeSize = size;
+        this.indexType = indexType;
     }
 
     public int lowerBound(IndexContent key) {

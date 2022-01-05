@@ -7,6 +7,8 @@ import database.rzotgorz.utils.ByteLongConverter;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ResourceBundle;
@@ -18,9 +20,21 @@ public class FileIndex {
     private IndexHandler indexHandler;
     private boolean modified;
     private TreeNode rootNode;
-
+    private List<String> indexType;
+    private String dbName;
     private static final ResourceBundle bundle = ResourceBundle.getBundle("configurations");
     private static final int PAGE_SIZE = Integer.parseInt(bundle.getString("PAGE_SIZE"));
+    private int typeSize;
+
+    public void setIndexType(List<String> types) {
+        if (indexType == null) {
+            indexType = types;
+            typeSize = IndexUtility.calcSize(types);
+        } else {
+            throw new RuntimeException("IndexType Already set!");
+        }
+    }
+
 
     private long[] processByte(byte[] data) {
         assert (data.length % 8 == 0);
@@ -36,40 +50,76 @@ public class FileIndex {
         return longData;
     }
 
-    public FileIndex(int rootId, IndexHandler handler) {
+    public FileIndex(int rootId, IndexHandler handler, String dbName, List<String> types) {
         this.rootId = rootId;
         this.modified = false;
         this.indexHandler = handler;
-        this.rootNode = new InterNode(rootId, -1, new ArrayList<>(), new ArrayList<>(), indexHandler);
+        this.dbName = dbName;
+        this.indexType = types;
+        this.typeSize = IndexUtility.calcSize(types);
+        this.rootNode = new InterNode(rootId, -1, new ArrayList<>(), new ArrayList<>(), indexHandler, this.typeSize, this.indexType);
+    }
+
+    public FileIndex(int rootId, IndexHandler handler, String dbName) {
+        this.rootId = rootId;
+        this.modified = false;
+        this.indexHandler = handler;
+        this.dbName = dbName;
+        this.load();
+        this.rootNode = new InterNode(rootId, -1, new ArrayList<>(), new ArrayList<>(), indexHandler, this.typeSize, this.indexType);
     }
 
     public TreeNode buildNode(int pageId) {
         this.modified = true;
         byte[] dataBytes = indexHandler.getPage(pageId);
-        long[] data = processByte(dataBytes);
+        byte[] msgBytes = new byte[40];
+        System.arraycopy(dataBytes, 0, msgBytes, 0, 40);
+        long[] data = processByte(msgBytes);
         TreeNode node;
         long parentId = data[1];
         if (data[0] == 1) {
+            int head = 40;
             long prevId = data[2];
             long nextId = data[3];
             long childLen = data[4];
             List<IndexContent> childKeys = new ArrayList<>();
-            for (int i = 0; i < childLen; i++)
-                childKeys.add(data[i * 3 + 5]);
+            for (int i = 0; i < childLen; i++) {
+                byte[] bytes = new byte[this.typeSize];
+                System.arraycopy(dataBytes, head, bytes, 0, this.typeSize);
+                childKeys.add(IndexUtility.parserBytes(bytes, this.indexType));
+                head = head + this.typeSize + 16;
+            }
             List<RID> childRids = new ArrayList<>();
-            for (int i = 0; i < childLen; i++)
-                childRids.add(new RID(data[i * 3 + 6], data[i * 3 + 7]));
+            head = 40 + this.typeSize;
+            for (int i = 0; i < childLen; i++) {
+                byte[] pageIdByte = new byte[8];
+                byte[] slotIdByte = new byte[8];
+                System.arraycopy(dataBytes, head, pageIdByte, 0, 8);
+                System.arraycopy(dataBytes, head + 8, slotIdByte, 0, 8);
+                childRids.add(new RID(ByteLongConverter.bytes2Long(pageIdByte), ByteLongConverter.bytes2Long(slotIdByte)));
+                head = head + this.typeSize + 16;
+            }
             assert (childKeys.size() == childRids.size());
-            node = new LeafNode(pageId, parentId, prevId, nextId, childRids, childKeys, this.indexHandler);
+            node = new LeafNode(pageId, parentId, prevId, nextId, childRids, childKeys, this.indexHandler, this.typeSize, this.indexType);
         } else {
             long childLen = data[2];
             List<IndexContent> childKeys = new ArrayList<>();
-            for (int i = 0; i < childLen; i++)
-                childKeys.add(data[i * 2 + 3]);
+            int head = 24;
+            for (int i = 0; i < childLen; i++) {
+                byte[] bytes = new byte[this.typeSize];
+                System.arraycopy(dataBytes, head, bytes, 0, this.typeSize);
+                childKeys.add(IndexUtility.parserBytes(bytes, this.indexType));
+                head = head + this.typeSize + 8;
+            }
+            head = 24 + this.typeSize;
             List<TreeNode> childNodes = new ArrayList<>();
-            for (int i = 0; i < childLen; i++)
-                childNodes.add(this.buildNode((int) data[i * 2 + 4]));
-            node = new InterNode(pageId, parentId, childNodes, childKeys, this.indexHandler);
+            for (int i = 0; i < childLen; i++) {
+                byte[] childNode = new byte[8];
+                System.arraycopy(dataBytes, head, childNode, 0, 8);
+                childNodes.add(this.buildNode((int) ByteLongConverter.bytes2Long(childNode)));
+                head += this.typeSize + 8;
+            }
+            node = new InterNode(pageId, parentId, childNodes, childKeys, this.indexHandler, this.typeSize, this.indexType);
         }
         return node;
     }
@@ -79,7 +129,7 @@ public class FileIndex {
         this.rootNode.insert(key, rid);
         if (this.rootNode.pageSize() > PAGE_SIZE) {
             int newPageId = indexHandler.createNewPage();
-            InterNode root = new InterNode(newPageId, -1, new ArrayList<>(), new ArrayList<>(), indexHandler);
+            InterNode root = new InterNode(newPageId, -1, new ArrayList<>(), new ArrayList<>(), indexHandler, this.typeSize, this.indexType);
             this.rootNode.parentId = newPageId;
             int newPageStoreId = indexHandler.createNewPage();
 //            System.out.println(rootNode.getChildKeys());
@@ -87,7 +137,7 @@ public class FileIndex {
             IndexContent minKey = rootNode.childKeys.get(0);
             List<IndexContent> newKeys = (ArrayList<IndexContent>) object.get("newKeys");
             List<TreeNode> newNodes = (ArrayList<TreeNode>) object.get("newVal");
-            InterNode node = new InterNode(newPageStoreId, newPageId, newNodes, newKeys, indexHandler);
+            InterNode node = new InterNode(newPageStoreId, newPageId, newNodes, newKeys, indexHandler, this.typeSize, this.indexType);
             IndexContent maxKey = (IndexContent) object.get("maxKey");
             root.childKeys.add(minKey);
             root.childKeys.add(maxKey);
@@ -105,6 +155,27 @@ public class FileIndex {
         long parentId = data[1];
         assert (nodeType == 0);
         assert (parentId == -1);
+        String typePath = dbName + File.separator + dbName + ".type";
+        File file = new File(typePath);
+        try {
+            FileInputStream fis = new FileInputStream(file);
+            BufferedInputStream bis = new BufferedInputStream(fis);
+            byte[] str = bis.readAllBytes();
+            StringBuilder builder = new StringBuilder();
+            for (int i = 0; i < str.length; i++) {
+                builder.append(str[i]);
+            }
+            String[] strs = builder.toString().split(",");
+            List<String> list = new ArrayList<>();
+            for (int i = 0; i < strs.length; i++) {
+                list.add(strs[i]);
+            }
+            this.indexType = list;
+            typeSize = IndexUtility.calcSize(list);
+
+        } catch (IOException e) {
+            throw new RuntimeException("IndexType not exists!! This table cannot be used");
+        }
         this.rootNode = this.buildNode(rootId);
     }
 
@@ -117,6 +188,20 @@ public class FileIndex {
 
     public void dump() {
         List<TreeNode> needHandle = new ArrayList<>();
+        String typePath = dbName + File.separator + dbName + ".type";
+        File file = new File(typePath);
+        try {
+            FileOutputStream fis = new FileOutputStream(file);
+            BufferedOutputStream bis = new BufferedOutputStream(fis);
+            String s = "";
+            for (int i = 0; i < indexType.size(); i++) {
+                s += indexType.get(i) + ",";
+            }
+            byte[] str = s.getBytes(StandardCharsets.UTF_8);
+            bis.write(str);
+        } catch (IOException e) {
+            throw new RuntimeException("IndexType not exists!! This table cannot be used");
+        }
         needHandle.add(this.rootNode);
         int tail = 0;
         while (needHandle.size() != tail) {

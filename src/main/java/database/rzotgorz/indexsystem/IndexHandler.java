@@ -20,6 +20,7 @@ public class IndexHandler {
     private FileManager fileManager;
     private boolean modified;
     private int fileId;
+    private int typeFileId;
     private String dbName;
 
     public IndexHandler(FileManager fm, String dbName) {
@@ -27,11 +28,17 @@ public class IndexHandler {
         this.fileManager = fm;
         this.modified = true;
         String path = dbName + File.separator + dbName + ".index";
+        String typePath = dbName + File.separator + dbName + ".type";
         File file = new File(path);
         if (!file.exists())
             this.fileId = fm.createFile(path);
         else
             this.fileId = fm.openFile(path);
+        File typeFile = new File(typePath);
+        if (!typeFile.exists())
+            this.typeFileId = fm.createFile(typePath);
+        else
+            this.typeFileId = fm.openFile(typePath);
     }
 
     public byte[] getPage(int pageId) {

@@ -2,6 +2,7 @@ package database.rzotgorz.indexsystem;
 
 import com.alibaba.fastjson.JSONObject;
 import database.rzotgorz.recordsystem.RID;
+import database.rzotgorz.utils.ByteLongConverter;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
@@ -18,8 +19,8 @@ public class InterNode extends TreeNode {
     private static final ResourceBundle bundle = ResourceBundle.getBundle("configurations");
     private static final int PAGE_SIZE = Integer.parseInt(bundle.getString("PAGE_SIZE"));
 
-    public InterNode(long pageId, long parentId, List<TreeNode> childNodes, List<IndexContent> childKeys, IndexHandler indexHandler) {
-        super(pageId, parentId, childKeys, indexHandler);
+    public InterNode(long pageId, long parentId, List<TreeNode> childNodes, List<IndexContent> childKeys, IndexHandler indexHandler, int size, List<String> list) {
+        super(pageId, parentId, childKeys, indexHandler, size, list);
         this.childNodes = childNodes;
         this.nodeType = 0;
     }
@@ -49,16 +50,14 @@ public class InterNode extends TreeNode {
 
     @Override
     public void insert(IndexContent key, RID rid) {
-//        log.info("key: {}", key);
         int index = this.lowerBound(key);
         if (index == -1) {
             this.childKeys.add(key);
             int nodePageId = indexHandler.createNewPage();
-            TreeNode node = new LeafNode(nodePageId, this.pageId, 0, 0, new ArrayList<RID>(), new ArrayList<IndexContent>(), indexHandler);
+            TreeNode node = new LeafNode(nodePageId, this.pageId, 0, 0, new ArrayList<RID>(), new ArrayList<IndexContent>(), indexHandler, this.typeSize, this.indexType);
             this.childNodes.add(node);
             node.insert(key, rid);
         } else {
-//            log.info("index:{}", index);
             TreeNode currentNode = this.childNodes.get(index);
             currentNode.insert(key, rid);
             if (childKeys.get(index).compareTo(key) > 0)
@@ -75,20 +74,15 @@ public class InterNode extends TreeNode {
                 if (currentNode.nodeType == 0) {
                     List<TreeNode> newVal;
                     newVal = (ArrayList<TreeNode>) object.get("newVal");
-                    node = new InterNode(newPageId, this.pageId, newVal, newKeys, indexHandler);
+                    node = new InterNode(newPageId, this.pageId, newVal, newKeys, indexHandler, this.typeSize, this.indexType);
                 } else {
                     LeafNode leafNode = (LeafNode) currentNode;
                     List<RID> newVal;
                     newVal = (ArrayList<RID>) object.get("newVal");
                     leafNode.setNextId(newPageId);
-                    node = new LeafNode(newPageId, leafNode.parentId, leafNode.pageId, leafNode.getNextId(), newVal, newKeys, indexHandler);
+                    node = new LeafNode(newPageId, leafNode.parentId, leafNode.pageId, leafNode.getNextId(), newVal, newKeys, indexHandler, this.typeSize, this.indexType);
                 }
-//                log.info("nodePageId:{}", newPageId);
                 childNodes.add(index + 1, node);
-//                log.info("pageId:{}", childNodes.get(index + 1).pageId);
-//                for (int i = 0; i < childNodes.size(); i++) {
-//                    System.out.println(childNodes.get(i).childKeys);
-//                }
             }
         }
     }
@@ -105,7 +99,6 @@ public class InterNode extends TreeNode {
             return null;
         for (int i = head; i < tail; i++) {
             int j = i - shift;
-//            log.info("interNode i :{},j:{}", i, j);
             TreeNode node = childNodes.get(j);
             IndexContent changeKey = node.remove(key, val);
             if (changeKey != null) {
@@ -126,22 +119,30 @@ public class InterNode extends TreeNode {
 
     @Override
     public int pageSize() {
-        return 24 + childKeys.size() * 16 + 32;
+        return 24 + childKeys.size() * (this.typeSize + 8) + 32;
     }
 
     @Override
     public byte[] turnToBytes() {
-        Long[] longs = new Long[PAGE_SIZE / 8];
+        Long[] longs = new Long[3];
+        byte[] bytes = new byte[PAGE_SIZE];
         Arrays.fill(longs, 0L);
         longs[0] = (long) this.nodeType;
         longs[1] = this.parentId;
         longs[2] = (long) this.childKeys.size();
+        byte[] headBytes = processLongsToBytes(longs);
+        System.arraycopy(headBytes, 0, bytes, 0, headBytes.length);
+        int head = headBytes.length;
         for (int i = 0; i < this.childKeys.size(); i++) {
-            longs[i * 2 + 3] = this.childKeys.get(i);
-            longs[i * 2 + 4] = this.childNodes.get(i).pageId;
-//            log.info("pageId: {}", this.childKeys.get(i));
+            byte[] dataBytes;
+            dataBytes = IndexUtility.turnToBytes(this.typeSize, this.childKeys.get(i), this.indexType);
+            System.arraycopy(dataBytes, 0, bytes, head, dataBytes.length);
+            head += this.typeSize;
+            byte[] pageIdByte = ByteLongConverter.long2Bytes(this.childNodes.get(i).pageId);
+            System.arraycopy(pageIdByte, 0, bytes, head, 8);
+            head += 8;
         }
-        return processLongsToBytes(longs);
+        return bytes;
     }
 
     @Override
