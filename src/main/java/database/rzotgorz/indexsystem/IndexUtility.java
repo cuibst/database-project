@@ -18,11 +18,11 @@ public class IndexUtility {
     static public int calcSize(List<String> list) {
         int size = 0;
         for (int i = 0; i < list.size(); i++) {
-            if (list.get(i).contains("LONG")) {
+            if (list.get(i).contains("INT")) {
                 size += 9;
             } else if (list.get(i).contains("FLOAT")) {
                 size += 5;
-            } else if (list.get(i).contains("STRING")) {
+            } else if (list.get(i).contains("VARCHAR")) {
                 list.get(i).replace(")", "");
                 String[] s = list.get(i).split("\\(");
                 size += Integer.parseInt(s[1]) + 1;
@@ -45,7 +45,7 @@ public class IndexUtility {
         Arrays.fill(data, (byte) 0);
         int head = 0;
         for (int i = 0; i < list.size(); i++) {
-            if (list.get(i).contains("LONG")) {
+            if (list.get(i).contains("INT")) {
                 if (content.getIndexList().get(i) == null) {
                     data[head] = 0;
                     head++;
@@ -67,7 +67,7 @@ public class IndexUtility {
                     System.arraycopy(res, 0, data, head, 8);
                 }
                 head += 4;
-            } else if (list.get(i).contains("STRING")) {
+            } else if (list.get(i).contains("VARCHAR")) {
                 int len = getStringSize(list.get(i));
                 if (content.getIndexList().get(i) == null) {
                     data[head] = 0;
@@ -100,7 +100,7 @@ public class IndexUtility {
         int head = 0;
         List<Comparable> resList = new ArrayList<>();
         for (int i = 0; i < list.size(); i++) {
-            if (list.get(i).contains("LONG")) {
+            if (list.get(i).contains("INT")) {
                 byte[] longBytes = new byte[8];
                 if (data[head] == (byte) 0) {
                     resList.add(null);
@@ -124,7 +124,7 @@ public class IndexUtility {
                     resList.add(res);
                 }
                 head += 4;
-            } else if (list.get(i).contains("STRING")) {
+            } else if (list.get(i).contains("VARCHAR")) {
                 int len = getStringSize(list.get(i));
                 byte[] strBytes = new byte[len];
                 if (data[head] == (byte) 0) {
