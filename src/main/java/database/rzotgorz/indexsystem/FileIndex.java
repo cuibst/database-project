@@ -46,10 +46,6 @@ public class FileIndex {
     public TreeNode buildNode(int pageId) {
         this.modified = true;
         byte[] dataBytes = indexHandler.getPage(pageId);
-//        for (int i = 0; i < dataBytes.length; i++)
-//            if (dataBytes[i] != 0)
-//                log.info("dataBytes:{}", dataBytes[i]);
-//            System.out.println(dataBytes[i]);
         long[] data = processByte(dataBytes);
         TreeNode node;
         long parentId = data[1];
@@ -57,7 +53,7 @@ public class FileIndex {
             long prevId = data[2];
             long nextId = data[3];
             long childLen = data[4];
-            List<Long> childKeys = new ArrayList<>();
+            List<IndexContent> childKeys = new ArrayList<>();
             for (int i = 0; i < childLen; i++)
                 childKeys.add(data[i * 3 + 5]);
             List<RID> childRids = new ArrayList<>();
@@ -67,7 +63,7 @@ public class FileIndex {
             node = new LeafNode(pageId, parentId, prevId, nextId, childRids, childKeys, this.indexHandler);
         } else {
             long childLen = data[2];
-            List<Long> childKeys = new ArrayList<>();
+            List<IndexContent> childKeys = new ArrayList<>();
             for (int i = 0; i < childLen; i++)
                 childKeys.add(data[i * 2 + 3]);
             List<TreeNode> childNodes = new ArrayList<>();
@@ -78,7 +74,7 @@ public class FileIndex {
         return node;
     }
 
-    public void insert(long key, RID rid) {
+    public void insert(IndexContent key, RID rid) {
         this.modified = true;
         this.rootNode.insert(key, rid);
         if (this.rootNode.pageSize() > PAGE_SIZE) {
@@ -88,11 +84,11 @@ public class FileIndex {
             int newPageStoreId = indexHandler.createNewPage();
 //            System.out.println(rootNode.getChildKeys());
             JSONObject object = this.rootNode.split();
-            long minKey = rootNode.childKeys.get(0);
-            List<Long> newKeys = (ArrayList<Long>) object.get("newKeys");
+            IndexContent minKey = rootNode.childKeys.get(0);
+            List<IndexContent> newKeys = (ArrayList<IndexContent>) object.get("newKeys");
             List<TreeNode> newNodes = (ArrayList<TreeNode>) object.get("newVal");
             InterNode node = new InterNode(newPageStoreId, newPageId, newNodes, newKeys, indexHandler);
-            long maxKey = Integer.parseInt(object.get("maxKey").toString());
+            IndexContent maxKey = (IndexContent) object.get("maxKey");
             root.childKeys.add(minKey);
             root.childKeys.add(maxKey);
             root.addChildNodes(this.rootNode);
@@ -112,7 +108,7 @@ public class FileIndex {
         this.rootNode = this.buildNode(rootId);
     }
 
-    public void build(List<Long> childKeys, List<RID> childRids) {
+    public void build(List<IndexContent> childKeys, List<RID> childRids) {
         this.modified = true;
         assert (childKeys.size() == childRids.size());
         for (int i = 0; i < childKeys.size(); i++)
@@ -134,16 +130,16 @@ public class FileIndex {
         }
     }
 
-    public void remove(long key, RID rid) {
+    public void remove(IndexContent key, RID rid) {
         this.modified = true;
         this.rootNode.remove(key, rid);
     }
 
-    public RID search(long key) {
+    public RID search(IndexContent key) {
         return this.rootNode.search(key);
     }
 
-    public ArrayList<RID> range(int low, int high) {
+    public ArrayList<RID> range(IndexContent low, IndexContent high) {
         return this.rootNode.range(low, high);
     }
 }

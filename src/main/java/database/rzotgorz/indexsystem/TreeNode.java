@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSONObject;
 import database.rzotgorz.recordsystem.RID;
 import database.rzotgorz.utils.ByteLongConverter;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
@@ -12,26 +13,25 @@ import java.util.ResourceBundle;
 
 @Data
 @Slf4j
+@NoArgsConstructor
 public class TreeNode {
     protected long pageId;
     protected long parentId;
-    protected List<Long> childKeys;
+    protected List<IndexContent> childKeys;
     protected IndexHandler indexHandler;
     protected int nodeType;
     private static final ResourceBundle bundle = ResourceBundle.getBundle("configurations");
     private static final int PAGE_SIZE = Integer.parseInt(bundle.getString("PAGE_SIZE"));
 
-    public TreeNode() {
-    }
 
-    public TreeNode(long pageId, long parentId, List<Long> childKeys, IndexHandler indexHandler) {
+    public TreeNode(long pageId, long parentId, List<IndexContent> childKeys, IndexHandler indexHandler) {
         this.pageId = pageId;
         this.childKeys = childKeys;
         this.parentId = parentId;
         this.indexHandler = indexHandler;
     }
 
-    public int lowerBound(long key) {
+    public int lowerBound(IndexContent key) {
         if (childKeys.size() == 0)
             return -1;
         int head = 0;
@@ -39,17 +39,17 @@ public class TreeNode {
         int pos = childKeys.size() - 1;
         while (head < tail) {
             int mid = (int) Math.floor((head + tail) / 2.0);
-            if (childKeys.get(mid) < key)
+            if (childKeys.get(mid).compareTo(key) < 0)
                 head = mid + 1;
             else
                 tail = mid;
         }
-        if (childKeys.get(head) >= key)
+        if (childKeys.get(head).compareTo(key) >= 0)
             pos = head;
         return pos;
     }
 
-    public int upperBound(long key) {
+    public int upperBound(IndexContent key) {
         if (childKeys.size() == 0)
             return -1;
         int head = 0;
@@ -57,14 +57,14 @@ public class TreeNode {
         int pos = childKeys.size();
         while (head < tail) {
             int mid = (int) Math.floor((head + tail) / 2.0);
-            if (childKeys.get(mid) <= key)
+            if (childKeys.get(mid).compareTo(key) <= 0)
                 head = mid + 1;
             else {
                 tail = mid;
                 pos = tail;
             }
         }
-        if (childKeys.get(head) > key)
+        if (childKeys.get(head).compareTo(key) > 0)
             pos = head;
         return pos;
     }
@@ -81,7 +81,7 @@ public class TreeNode {
     }
 
 
-    public void insert(long key, RID rid) {
+    public void insert(IndexContent key, RID rid) {
         log.info("ERROR!!! invalid funciton used in base class");
     }
 
@@ -95,13 +95,13 @@ public class TreeNode {
         return null;
     }
 
-    public void insert(long key, TreeNode node) {
-        log.info("ERROR!!! invalid funciton used in base class");
-    }
+//    public void insert(IndexContent key, TreeNode node) {
+//        log.info("ERROR!!! invalid funciton used in base class");
+//    }
 
-    public int remove(long key, RID val) {
+    public IndexContent remove(IndexContent key, RID val) {
         log.info("ERROR!!! invalid funciton used in base class");
-        return -1;
+        return null;
     }
 
     public byte[] turnToBytes() {
@@ -109,12 +109,12 @@ public class TreeNode {
         return null;
     }
 
-    public RID search(long key) {
+    public RID search(IndexContent key) {
         log.info("ERROR!!! invalid funciton used in base class");
         return null;
     }
 
-    public ArrayList<RID> range(int low, int high) {
+    public ArrayList<RID> range(IndexContent low, IndexContent high) {
         return null;
     }
 }

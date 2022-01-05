@@ -18,7 +18,7 @@ public class InterNode extends TreeNode {
     private static final ResourceBundle bundle = ResourceBundle.getBundle("configurations");
     private static final int PAGE_SIZE = Integer.parseInt(bundle.getString("PAGE_SIZE"));
 
-    public InterNode(long pageId, long parentId, List<TreeNode> childNodes, List<Long> childKeys, IndexHandler indexHandler) {
+    public InterNode(long pageId, long parentId, List<TreeNode> childNodes, List<IndexContent> childKeys, IndexHandler indexHandler) {
         super(pageId, parentId, childKeys, indexHandler);
         this.childNodes = childNodes;
         this.nodeType = 0;
@@ -29,12 +29,10 @@ public class InterNode extends TreeNode {
     }
 
     public JSONObject split() {
-//        log.info("in here");
-//        log.info("InterNode split");
         int mid = (int) Math.floor((childKeys.size() + 1) / 2.0);
-        ArrayList<Long> newKeys = new ArrayList<>();
+        List<IndexContent> newKeys = new ArrayList<>();
         newKeys.addAll(this.childKeys.subList(mid, childKeys.size()));
-        ArrayList<TreeNode> newNodes = new ArrayList<>();
+        List<TreeNode> newNodes = new ArrayList<>();
         newNodes.addAll(this.childNodes.subList(mid, childNodes.size()));
         JSONObject object = new JSONObject();
         object.put("newKeys", newKeys);
@@ -50,28 +48,28 @@ public class InterNode extends TreeNode {
     }
 
     @Override
-    public void insert(long key, RID rid) {
+    public void insert(IndexContent key, RID rid) {
 //        log.info("key: {}", key);
         int index = this.lowerBound(key);
         if (index == -1) {
             this.childKeys.add(key);
             int nodePageId = indexHandler.createNewPage();
-            TreeNode node = new LeafNode(nodePageId, this.pageId, 0, 0, new ArrayList<RID>(), new ArrayList<Long>(), indexHandler);
+            TreeNode node = new LeafNode(nodePageId, this.pageId, 0, 0, new ArrayList<RID>(), new ArrayList<IndexContent>(), indexHandler);
             this.childNodes.add(node);
             node.insert(key, rid);
         } else {
 //            log.info("index:{}", index);
             TreeNode currentNode = this.childNodes.get(index);
             currentNode.insert(key, rid);
-            if (key < childKeys.get(index))
+            if (childKeys.get(index).compareTo(key) > 0)
                 childKeys.set(index, key);
             if (currentNode.pageSize() > PAGE_SIZE) {
                 JSONObject object = currentNode.split();
                 assert (object != null);
-                ArrayList<Long> newKeys;
-                newKeys = (ArrayList<Long>) object.get("newKeys");
-                int maxKey = Integer.parseInt(object.get("maxKey").toString());
-                childKeys.add(index + 1, (long) maxKey);
+                List<IndexContent> newKeys;
+                newKeys = (ArrayList<IndexContent>) object.get("newKeys");
+                IndexContent maxKey = (IndexContent) object.get("maxKey");
+                childKeys.add(index + 1, maxKey);
                 int newPageId = indexHandler.createNewPage();
                 TreeNode node;
                 if (currentNode.nodeType == 0) {
@@ -96,32 +94,31 @@ public class InterNode extends TreeNode {
     }
 
     @Override
-    public int remove(long key, RID val) {
+    public IndexContent remove(IndexContent key, RID val) {
         int head = lowerBound(key);
         int tail = upperBound(key);
         if (tail < childKeys.size())
             tail += 1;
         int shift = 0;
-        int ret = -1;
+        IndexContent ret = null;
         if (head == -1 || tail == -1)
-            return -1;
+            return null;
         for (int i = head; i < tail; i++) {
             int j = i - shift;
 //            log.info("interNode i :{},j:{}", i, j);
             TreeNode node = childNodes.get(j);
-            int changeKey = node.remove(key, val);
-            if (changeKey != -1) {
-                childKeys.set(j, (long) changeKey);
-                if (changeKey == 0)
-                    ret = changeKey;
+            IndexContent changeKey = node.remove(key, val);
+            if (changeKey != null) {
+                childKeys.set(j, changeKey);
             }
             if (node.childKeys.size() == 0) {
                 childKeys.remove(j);
                 childNodes.remove(j);
                 shift += 1;
-                if (j == 0 && childKeys.size() > 0) {
-                    ret = (int) (long) childKeys.get(0);
-                }
+
+            }
+            if (j == 0 && childKeys.size() > 0) {
+                ret = childKeys.get(0);
             }
         }
         return ret;
@@ -148,7 +145,7 @@ public class InterNode extends TreeNode {
     }
 
     @Override
-    public RID search(long key) {
+    public RID search(IndexContent key) {
         int index = lowerBound(key);
         if (index == childNodes.size())
             index--;
@@ -162,7 +159,7 @@ public class InterNode extends TreeNode {
     }
 
     @Override
-    public ArrayList<RID> range(int low, int high) {
+    public ArrayList<RID> range(IndexContent low, IndexContent high) {
         ArrayList<RID> res = new ArrayList<>();
         int lower = lowerBound(low);
         int upper = upperBound(high);
