@@ -205,11 +205,11 @@ public class DatabaseController {
         FileScanner fileScanner = new FileScanner(fileHandler);
         for (Record record : fileScanner) {
             List<Object> data = pack.info.loadRecord(record);
-            if(checkAnyUnique(tableName, columns, data, record.getRid()))
+            if (checkAnyUnique(tableName, columns, data, record.getRid()))
                 throw new RuntimeException(String.format("Duplicated keys for %s", data));
         }
         pack.handler.addUnique(pack.info, constraintName, columns);
-        if(!pack.info.existsIndex(tableName + "." + columns))
+        if (!pack.info.existsIndex(tableName + "." + columns))
             createIndex(tableName + "." + columns, tableName, columns);
     }
 
@@ -223,17 +223,17 @@ public class DatabaseController {
         for (Record record : fileScanner) {
             List<Object> data = pack.info.loadRecord(record);
             Object[] tmp = new Object[targetPack.info.getColIndex().size()];
-            for(int i=0;i<foreignKey.columns.size();i++) {
+            for (int i = 0; i < foreignKey.columns.size(); i++) {
                 tmp[targetPack.info.getIndex(foreignKey.targetColumns.get(i))] = data.get(pack.info.getIndex(foreignKey.columns.get(i)));
             }
             List<Object> targetData = new ArrayList<>(Arrays.asList(tmp));
-            if(!checkAnyUnique(foreignKey.targetTable, foreignKey.targetColumns, targetData, null))
+            if (!checkAnyUnique(foreignKey.targetTable, foreignKey.targetColumns, targetData, null))
                 throw new RuntimeException(String.format("Foreign Key for %s cannot find matching result.", data.toString()));
         }
         pack.handler.addForeign(tableName, foreignKey);
-        if(!pack.handler.existsIndex(tableName + "." + foreignKey.columns))
+        if (!pack.handler.existsIndex(tableName + "." + foreignKey.columns))
             createIndex(tableName + "." + foreignKey.columns, tableName, foreignKey.columns);
-        if(!targetPack.handler.existsIndex(foreignKey.targetTable + "." + foreignKey.targetColumns))
+        if (!targetPack.handler.existsIndex(foreignKey.targetTable + "." + foreignKey.targetColumns))
             createIndex(foreignKey.targetTable + "." + foreignKey.targetColumns, foreignKey.targetTable, foreignKey.targetColumns);
     }
 
@@ -245,13 +245,13 @@ public class DatabaseController {
         FileScanner fileScanner = new FileScanner(fileHandler);
         for (Record record : fileScanner) {
             List<Object> data = pack.info.loadRecord(record);
-            if(checkAnyUnique(tableName, primaryKey.fields, data, record.getRid()))
+            if (checkAnyUnique(tableName, primaryKey.fields, data, record.getRid()))
                 throw new RuntimeException(String.format("Duplicated keys for %s", data));
         }
         pack.handler.setPrimary(tableName, primaryKey == null ? null : primaryKey.fields);
         if (primaryKey == null)
             return;
-        if(!pack.handler.existsIndex(tableName + "." + primaryKey.fields))
+        if (!pack.handler.existsIndex(tableName + "." + primaryKey.fields))
             createIndex(tableName + "." + primaryKey.fields, tableName, primaryKey.fields);
     }
 
@@ -286,12 +286,12 @@ public class DatabaseController {
         List<Integer> columnId = new ArrayList<>();
         columnName.forEach(column -> {
             String type = pack.info.getColumns().get(column).getType();
-            if(type.equals("VARCHAR"))
+            if (type.equals("VARCHAR"))
                 indexType.add(String.format("%s(%d)", type, pack.info.getColumns().get(column).getSize()));
             else
                 indexType.add(type);
             Integer id = pack.info.getIndex(column);
-            if(id == null)
+            if (id == null)
                 throw new RuntimeException(String.format("Column %s not exists", column));
         });
 
@@ -425,7 +425,7 @@ public class DatabaseController {
             IndexContent upper = new IndexContent(new ArrayList<>(List.of(entry.getValue().upper)));
             if (result == null) {
                 ArrayList<RID> res = index.range(lower, upper);
-                if(res == null)
+                if (res == null)
                     return null;
                 (result = new HashSet<>()).addAll(Set.copyOf(index.range(lower, upper)));
             } else
@@ -475,14 +475,14 @@ public class DatabaseController {
     public boolean checkAnyUnique(String tableName, List<String> columns, List<Object> values, RID currentRow) throws UnsupportedEncodingException {
         InfoAndHandler infoPack = getTableInfo(tableName);
         log.info(infoPack.info.getIndicesMap().toString());
-        if(infoPack.info.getRootId(columns) != null) {
+        if (infoPack.info.getRootId(columns) != null) {
             int rootId = infoPack.info.getRootId(columns);
             FileIndex index = indexManager.openedIndex(currentUsingDatabase, tableName, rootId, columns.toString());
             List<Comparable> value = new ArrayList<>();
             DbInfo.IndexInfo info = infoPack.handler.getDbInfo().getIndexInfo(tableName + "." + columns);
             info.columnName.forEach(column -> value.add((Comparable) values.get(infoPack.info.getIndex(column))));
             List<RID> rids = index.search(new IndexContent(value));
-            if(rids == null || rids.isEmpty())
+            if (rids == null || rids.isEmpty())
                 return false;
             return rids.size() != 1 || !rids.contains(currentRow);
         }
@@ -502,7 +502,7 @@ public class DatabaseController {
         List<Object> checkValues = new ArrayList<>();
         pack.info.getPrimary().forEach(primary -> {
             checkValues.add(values.get(pack.info.getIndex(primary)));
-            if(values.get(pack.info.getIndex(primary)) == null)
+            if (values.get(pack.info.getIndex(primary)) == null)
                 throw new RuntimeException("Primary key found NULL value.");
         });
         return checkAnyUnique(tableName, pack.info.getPrimary(), checkValues, currentRow);
@@ -535,17 +535,17 @@ public class DatabaseController {
                 String targetColumn = entry.getValue().targetColumns.get(i);
                 Object value = values.get(pack.info.getIndex(column));
                 indexValue.add((Comparable) value);
-                if(value == null)
+                if (value == null)
                     throw new RuntimeException("Foreign key can't have null value.");
                 clauses.add(new ValueOperatorClause(foreignKey.targetTable, targetColumn, "=", value));
             }
             InfoAndHandler targetPack = getTableInfo(foreignKey.targetTable);
-            if(targetPack.info.getRootId(foreignKey.targetColumns) != null) {
+            if (targetPack.info.getRootId(foreignKey.targetColumns) != null) {
                 log.info("index");
                 int rootId = targetPack.info.getRootId(foreignKey.targetColumns);
                 FileIndex index = indexManager.openedIndex(currentUsingDatabase, foreignKey.targetTable, rootId, foreignKey.targetColumns.toString());
                 List<RID> rids = index.search(new IndexContent(indexValue));
-                if(rids == null || rids.isEmpty())
+                if (rids == null || rids.isEmpty())
                     return true;
             } else {
                 log.info("brute force");
@@ -558,9 +558,8 @@ public class DatabaseController {
     }
 
     /**
-     *
      * @param tableName Table's name.
-     * @param values original record value.
+     * @param values    original record value.
      * @param newValues new value, null if delete
      * @return true when violate the constraint after delete
      * @throws UnsupportedEncodingException ???
@@ -638,7 +637,7 @@ public class DatabaseController {
         checkConstraints(tableName, valueList, null);
         List<String> stringList = new ArrayList<>();
         valueList.forEach(obj -> {
-            if(obj != null)
+            if (obj != null)
                 stringList.add(obj.toString());
             else
                 stringList.add(null);
@@ -679,11 +678,33 @@ public class DatabaseController {
             RecordDataPack dataPack = searchIndices(tableName, whereClauses);
             length = dataPack.records.size();
             FileHandler handler = this.recordManager.openFile(getTablePath(tableName));
-            dataPack.records.forEach(record -> {
+            boolean flag = false;
+            for (int i = 0; i < dataPack.records.size(); i++) {
+                List<Object> values = pack.info.loadRecord(dataPack.records.get(i));
+                checkConstraints(tableName, dataPack.data.get(i), dataPack.records.get(i).getRid());
+                setClauses.forEach(clause -> {
+                    int cnt = 0;
+                    for (Map.Entry<String, ColumnInfo> entry : pack.info.getColumns().entrySet()) {
+                        if (entry.getValue().getName().equals(clause.getColumnName())) {
+                            if (entry.getValue().getType().equals("INT"))
+                                values.set(cnt, Long.parseLong(clause.getValue()));
+                            else if (entry.getValue().getType().equals("FLOAT"))
+                                values.set(cnt, Float.parseFloat(clause.getValue()));
+                            else if (entry.getValue().getType().equals("VARCHAR"))
+                                values.set(cnt, clause.getValue());
+                        }
+                        cnt++;
+                    }
+                });
+                flag |= checkReverseForeignKeyConstraint(tableName, dataPack.data.get(i), values);
+                if (flag)
+                    throw new RuntimeException("Cannot update line due to reverse foreign key");
+            }
+            for (int j = 0; j < dataPack.records.size(); j++) {
+                Record record = dataPack.records.get(j);
                 try {
                     List<Object> values = pack.info.loadRecord(record);
-
-//                    handler.deleteRecord(record.getRid());
+                    List<Object> values1 = pack.info.loadRecord(dataPack.records.get(j));
                     List<String> headers = pack.info.getColumnName();
                     setClauses.forEach(clause -> {
                         for (int i = 0; i < headers.size(); i++) {
@@ -692,18 +713,31 @@ public class DatabaseController {
                                 values.set(i, clause.getValue());
                             }
                         }
+                        int cnt = 0;
+                        for (Map.Entry<String, ColumnInfo> entry : pack.info.getColumns().entrySet()) {
+                            if (entry.getValue().getName().equals(clause.getColumnName())) {
+                                if (entry.getValue().getType().equals("INT"))
+                                    values1.set(cnt, Long.parseLong(clause.getValue()));
+                                else if (entry.getValue().getType().equals("FLOAT"))
+                                    values1.set(cnt, Float.parseFloat(clause.getValue()));
+                                else if (entry.getValue().getType().equals("VARCHAR"))
+                                    values1.set(cnt, clause.getValue());
+                            }
+                            cnt++;
+                        }
                     });
                     List<String> stringList = new ArrayList<>();
                     values.forEach(obj -> stringList.add(obj.toString()));
                     byte[] data = pack.info.buildRecord(stringList);
                     record.setData(data);
                     handler.updateRecord(record);
+                    deleteIndices(tableName, currentUsingDatabase, dataPack.data.get(j), record.getRid());
+                    insertIndices(tableName, currentUsingDatabase, values1, record.getRid());
                     this.insertRecord(tableName, values);
                 } catch (UnsupportedEncodingException e) {
                     e.printStackTrace();
                 }
-            });
-
+            }
             dataPack.records.forEach(record -> handler.deleteRecord(record.getRid()));
         } catch (Exception e) {
             e.printStackTrace();
@@ -718,11 +752,20 @@ public class DatabaseController {
             RecordDataPack data = searchIndices(tableName, whereClauses);
             length = data.records.size();
             FileHandler handler = this.recordManager.openFile(getTablePath(tableName));
-            log.info(String.valueOf(data.records.size()));
-            data.records.forEach(record -> {
-                RID rid = record.getRid();
+//            log.info(String.valueOf(data.records.size()));
+//            data.data
+            boolean flag = false;
+            for (int i = 0; i < data.records.size(); i++) {
+                flag |= checkReverseForeignKeyConstraint(tableName, data.data.get(i), null);
+            }
+            if (flag) {
+                throw new RuntimeException("Cannot delete line due to ForeignKey constraint");
+            }
+            for (int i = 0; i < data.records.size(); i++) {
+                RID rid = data.records.get(i).getRid();
+                this.deleteIndices(tableName, currentUsingDatabase, data.data.get(i), rid);
                 handler.deleteRecord(rid);
-            });
+            }
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
         }
@@ -772,23 +815,23 @@ public class DatabaseController {
         //Step1: create edge map
         Map<Pair<String, String>, List<Pair<String, String>>> edgeMap = new HashMap<>();
         clauses.forEach(clause -> {
-            if(!(clause instanceof ColumnOperatorClause))
+            if (!(clause instanceof ColumnOperatorClause))
                 return;
             ColumnOperatorClause subClause = (ColumnOperatorClause) clause;
-            if(clause.getTableName().equals(clause.getTargetTable()))
+            if (clause.getTableName().equals(clause.getTargetTable()))
                 return;
-            if(!subClause.getOperator().equals("="))
+            if (!subClause.getOperator().equals("="))
                 throw new RuntimeException("Cross-table comparison must be equal.");
             Pair<String, String> tablePair;
             Pair<String, String> columnPair;
-            if(clause.getTableName().compareTo(clause.getTargetTable()) < 0) {
+            if (clause.getTableName().compareTo(clause.getTargetTable()) < 0) {
                 tablePair = new Pair<>(clause.getTableName(), clause.getTargetTable());
                 columnPair = new Pair<>(clause.getColumnName(), clause.getTargetColumn());
             } else {
                 tablePair = new Pair<>(clause.getTargetTable(), clause.getTableName());
                 columnPair = new Pair<>(clause.getTargetColumn(), clause.getColumnName());
             }
-            if(edgeMap.containsKey(tablePair))
+            if (edgeMap.containsKey(tablePair))
                 edgeMap.get(tablePair).add(columnPair);
             else
                 edgeMap.put(tablePair, new ArrayList<>(List.of(columnPair)));
@@ -802,7 +845,7 @@ public class DatabaseController {
         edgeMap.forEach((tablePair, constraints) -> {
             String outer = unionFindSet.getRoot(tablePair.first);
             String inner = unionFindSet.getRoot(tablePair.second);
-            if(outer.equals(inner)) {
+            if (outer.equals(inner)) {
                 List<List<Object>> nextResult = new ArrayList<>();
                 mergedMap.get(outer).getData().forEach(record -> {
                     boolean flag = true;
@@ -811,12 +854,12 @@ public class DatabaseController {
                         String innerColumn = tablePair.second + '.' + columnPair.second;
                         int outerId = mergedMap.get(outer).getHeaderIndex(outerColumn);
                         int innerId = mergedMap.get(outer).getHeaderIndex(innerColumn);
-                        if(!record.get(outerId).equals(record.get(innerId))) {
+                        if (!record.get(outerId).equals(record.get(innerId))) {
                             flag = false;
                             break;
                         }
                     }
-                    if(flag)
+                    if (flag)
                         nextResult.add(record);
                 });
                 mergedMap.replace(outer, new TableResult(mergedMap.get(outer).getHeaders(), nextResult));
@@ -832,12 +875,12 @@ public class DatabaseController {
                         String innerColumn = tablePair.second + '.' + columnPair.second;
                         int outerId = mergedMap.get(outer).getHeaderIndex(outerColumn);
                         int innerId = mergedMap.get(inner).getHeaderIndex(innerColumn);
-                        if(!outerRecord.get(outerId).equals(innerRecord.get(innerId))) {
+                        if (!outerRecord.get(outerId).equals(innerRecord.get(innerId))) {
                             flag = false;
                             break;
                         }
                     }
-                    if(flag) {
+                    if (flag) {
                         List<Object> concatRecord = new ArrayList<>();
                         concatRecord.addAll(outerRecord);
                         concatRecord.addAll(innerRecord);
@@ -854,12 +897,12 @@ public class DatabaseController {
         Set<String> mark = new HashSet<>();
         resultMap.keySet().forEach(key -> {
             String fkey = unionFindSet.getRoot(key);
-            if(mark.contains(fkey))
+            if (mark.contains(fkey))
                 return;
             mark.add(fkey);
             remainResult.add(mergedMap.get(fkey));
         });
-        while(remainResult.size() > 1) {
+        while (remainResult.size() > 1) {
             TableResult inner = remainResult.get(0);
             TableResult outer = remainResult.get(1);
             List<String> nextHeader = new ArrayList<>();
@@ -943,7 +986,7 @@ public class DatabaseController {
 
         TableResult result;
         //FIXME: deal with join later on.
-        if(tableNames.size() == 1)
+        if (tableNames.size() == 1)
             result = resultMap.get(tableNames.get(0));
         else {
             result = bruteForceJoin(resultMap, clauses);
