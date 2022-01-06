@@ -26,7 +26,7 @@ public class FileScanner implements Iterable<Record> {
                     continue;
                 byte[] bitmap = fileHandler.getBitmap(page);
                 slotId++;
-                for (; slotId < bitmap.length; slotId++)
+                for (; slotId < bitmap.length * 8; slotId++)
                     if ((bitmap[slotId / 8] & (1 << (slotId & 7))) > 0)
                         break OUT;
                 slotId = -1;
@@ -45,7 +45,7 @@ public class FileScanner implements Iterable<Record> {
 
         @Override
         public boolean hasNext() {
-            return count < fileHandler.getFileHeader().getInteger("pageNum") && slotId < fileHandler.getBitmap(fileHandler.getPage(count)).length;
+            return count < fileHandler.getFileHeader().getInteger("pageNum") && slotId < fileHandler.getBitmap(fileHandler.getPage(count)).length * 8;
         }
 
         @Override
