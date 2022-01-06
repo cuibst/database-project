@@ -158,6 +158,7 @@ public class InterNode extends TreeNode {
         int low = lowerBound(key);
         int high = upperBound(key);
         List<RID> list = new ArrayList<>();
+//        log.info("low :{} high:{}", low, high);
         if (low == childNodes.size())
             low--;
         if (high == childNodes.size())

@@ -85,6 +85,7 @@ public class Main {
                     builder = new StringBuilder();
                 }
             }
+            out.close();
             return;
         }
 
@@ -218,8 +219,8 @@ public class Main {
                     else
                         out.println();
                     out.println(resultItem);
-                    if (out.equals(System.out))
-                        out.println("Result received in " + resultItem.cost + "ms.");
+//                    if (out.equals(System.out))
+                    out.println("Result received in " + resultItem.cost + "ms.");
                 }
                 if (!out.equals(System.out))
                     out.println();

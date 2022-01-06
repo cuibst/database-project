@@ -98,6 +98,7 @@ public class LeafNode extends TreeNode {
             if (childKeys.get(i).compareTo(key) == 0)
                 list.add(childRids.get(i));
         }
+//        log.info(childKeys.toString());
         return list;
     }
 
