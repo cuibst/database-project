@@ -93,6 +93,8 @@ public class LeafNode extends TreeNode {
             low -= 1;
         if (high == childKeys.size())
             high -= 1;
+        if (low != 0)
+            low--;
         List<RID> list = new ArrayList<>();
         for (int i = low; i <= high; i++) {
             if (childKeys.get(i).compareTo(key) == 0)

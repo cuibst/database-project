@@ -512,8 +512,11 @@ public class DatabaseController {
             int rootId = infoPack.info.getRootId(columns);
             FileIndex index = indexManager.openedIndex(currentUsingDatabase, tableName, rootId, columns.toString());
             List<Comparable> value = new ArrayList<>();
-            DbInfo.IndexInfo info = infoPack.handler.getDbInfo().getIndexInfo(tableName + "." + columns);
-            info.columnName.forEach(column -> value.add((Comparable) values.get(infoPack.info.getIndex(column))));
+//            DbInfo.IndexInfo info = infoPack.handler.getDbInfo().getIndexInfo(tableName + "." + columns);
+//            info.columnName.forEach(column -> value.add((Comparable) values.get(infoPack.info.getIndex(column))));
+            for (int i = 0; i < values.size(); i++) {
+                value.add((Comparable) values.get(i));
+            }
             List<RID> rids = index.search(new IndexContent(value));
             if (rids == null || rids.isEmpty())
                 return false;
@@ -578,6 +581,8 @@ public class DatabaseController {
                 String column = columns.get(i);
                 String targetColumn = entry.getValue().targetColumns.get(i);
                 Object value = values.get(pack.info.getIndex(column));
+                log.info("column:{}", column);
+                log.info("targetColumn:{}", targetColumn);
                 indexValue.add((Comparable) value);
                 if (value == null)
                     throw new RuntimeException("Foreign key can't have null value.");
@@ -586,10 +591,11 @@ public class DatabaseController {
             InfoAndHandler targetPack = getTableInfo(foreignKey.targetTable);
             if (targetPack.info.getRootId(foreignKey.targetColumns) != null) {
                 int rootId = targetPack.info.getRootId(foreignKey.targetColumns);
+                log.info(targetPack.info.getPrimary().toString());
                 FileIndex index = indexManager.openedIndex(currentUsingDatabase, foreignKey.targetTable, rootId, foreignKey.targetColumns.toString());
-                List<RID> rids = index.search(new IndexContent(indexValue));
+//                log.info("targetTable:{},rootId:{},targetColumns:{}", foreignKey.targetTable, rootId, foreignKey.targetColumns.toString());
+                List<RID> rids = index.range(new IndexContent(indexValue), new IndexContent(indexValue));
                 if (rids == null || rids.isEmpty()) {
-                    log.info("{}", entry.getValue());
                     return true;
                 }
             } else {
