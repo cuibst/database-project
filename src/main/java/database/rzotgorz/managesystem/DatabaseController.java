@@ -292,6 +292,7 @@ public class DatabaseController {
             Integer id = pack.info.getIndex(column);
             if (id == null)
                 throw new RuntimeException(String.format("Column %s not exists", column));
+            columnId.add(id);
         });
 
 
@@ -686,18 +687,23 @@ public class DatabaseController {
                     int cnt = 0;
                     for (Map.Entry<String, ColumnInfo> entry : pack.info.getColumns().entrySet()) {
                         if (entry.getValue().getName().equals(clause.getColumnName())) {
-                            if (entry.getValue().getType().equals("INT"))
-                                values.set(cnt, Long.parseLong(clause.getValue()));
-                            else if (entry.getValue().getType().equals("FLOAT"))
-                                values.set(cnt, Float.parseFloat(clause.getValue()));
-                            else if (entry.getValue().getType().equals("VARCHAR"))
-                                values.set(cnt, clause.getValue());
+                            switch (entry.getValue().getType()) {
+                                case "INT":
+                                    values.set(cnt, Long.parseLong(clause.getValue()));
+                                    break;
+                                case "FLOAT":
+                                    values.set(cnt, Float.parseFloat(clause.getValue()));
+                                    break;
+                                case "VARCHAR":
+                                    values.set(cnt, clause.getValue());
+                                    break;
+                            }
                         }
                         cnt++;
                     }
                 });
                 checkConstraints(tableName, values, dataPack.records.get(i).getRid());
-                flag |= checkReverseForeignKeyConstraint(tableName, dataPack.data.get(i), values);
+                flag = checkReverseForeignKeyConstraint(tableName, dataPack.data.get(i), values);
                 if (flag)
                     throw new RuntimeException("Cannot update line due to reverse foreign key");
             }
@@ -717,12 +723,17 @@ public class DatabaseController {
                         int cnt = 0;
                         for (Map.Entry<String, ColumnInfo> entry : pack.info.getColumns().entrySet()) {
                             if (entry.getValue().getName().equals(clause.getColumnName())) {
-                                if (entry.getValue().getType().equals("INT"))
-                                    values1.set(cnt, Long.parseLong(clause.getValue()));
-                                else if (entry.getValue().getType().equals("FLOAT"))
-                                    values1.set(cnt, Float.parseFloat(clause.getValue()));
-                                else if (entry.getValue().getType().equals("VARCHAR"))
-                                    values1.set(cnt, clause.getValue());
+                                switch (entry.getValue().getType()) {
+                                    case "INT":
+                                        values1.set(cnt, Long.parseLong(clause.getValue()));
+                                        break;
+                                    case "FLOAT":
+                                        values1.set(cnt, Float.parseFloat(clause.getValue()));
+                                        break;
+                                    case "VARCHAR":
+                                        values1.set(cnt, clause.getValue());
+                                        break;
+                                }
                             }
                             cnt++;
                         }
