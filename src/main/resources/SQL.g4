@@ -49,7 +49,7 @@ io_statement
     ;
 
 table_statement
-    : 'CREATE' 'TABLE' Identifier '(' field_list ')'                    # createD_table
+    : 'CREATE' 'TABLE' Identifier '(' field_list ')'                    # create_table
     | 'DROP' 'TABLE' Identifier                                         # drop_table
     | 'DESC' Identifier                                                 # describe_table
     | 'INSERT' 'INTO' Identifier 'VALUES' value_lists                   # insert_into_table
@@ -70,6 +70,8 @@ alter_statement
     | 'ALTER' 'TABLE' Identifier 'ADD' 'CONSTRAINT' Identifier 'PRIMARY' 'KEY' '(' identifiers ')'      # alter_table_add_pk
     | 'ALTER' 'TABLE' Identifier 'ADD' 'CONSTRAINT' Identifier 'FOREIGN' 'KEY' '(' identifiers ')' 'REFERENCES' Identifier '(' identifiers ')'  # alter_table_add_foreign_key
     | 'ALTER' 'TABLE' Identifier 'ADD' 'UNIQUE' '(' identifiers ')'             # alter_table_add_unique
+    | 'ALTER' 'TABLE' Identifier 'ADD' 'COLUMN' Identifier type_ ('NOT' Null)? ('DEFAULT' value)?  # alter_table_add_column
+    | 'ALTER' 'TABLE' Identifier 'DROP' 'COLUMN' Identifier                      # alter_table_drop_column
     ;
 
 field_list

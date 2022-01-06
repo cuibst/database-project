@@ -229,7 +229,6 @@ public class FileIndex {
     }
 
     public List<RID> search(IndexContent key) {
-//        log.info(String.valueOf(this.rootNode.search(key).size()));
         return this.rootNode.search(key);
     }
 

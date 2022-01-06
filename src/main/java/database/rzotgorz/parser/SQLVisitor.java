@@ -1,4 +1,4 @@
-// Generated from D:/git-repo/dbms-homework/src/main/resources\SQL.g4 by ANTLR 4.9.2
+// Generated from C:/Users/dell/Desktop/dbms-homework/src/main/resources\SQL.g4 by ANTLR 4.9.1
 package database.rzotgorz.parser;
 import org.antlr.v4.runtime.tree.ParseTreeVisitor;
 
@@ -182,6 +182,20 @@ public interface SQLVisitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitAlter_table_add_unique(SQLParser.Alter_table_add_uniqueContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code alter_table_add_column}
+	 * labeled alternative in {@link SQLParser#alter_statement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitAlter_table_add_column(SQLParser.Alter_table_add_columnContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code alter_table_drop_column}
+	 * labeled alternative in {@link SQLParser#alter_statement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitAlter_table_drop_column(SQLParser.Alter_table_drop_columnContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link SQLParser#field_list}.
 	 * @param ctx the parse tree

@@ -159,8 +159,11 @@ public class FileManager {
             }
         }
         String filename = idToFilename[fileId];
-        idToFilename[fileId] = "";
+//        log.info(filename);
+//        log.info(filenameToId.toString());
         filenameToId.remove(filename);
+//        log.info(filenameToId.toString());
+        idToFilename[fileId] = "";
     }
 
     public byte[] readPage(int fileId, int pageId) {

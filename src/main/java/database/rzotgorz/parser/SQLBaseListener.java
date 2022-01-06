@@ -1,4 +1,4 @@
-// Generated from D:/git-repo/dbms-homework/src/main/resources\SQL.g4 by ANTLR 4.9.2
+// Generated from C:/Users/dell/Desktop/dbms-homework/src/main/resources\SQL.g4 by ANTLR 4.9.1
 package database.rzotgorz.parser;
 
 import org.antlr.v4.runtime.ParserRuleContext;
@@ -311,6 +311,30 @@ public class SQLBaseListener implements SQLListener {
 	 * <p>The default implementation does nothing.</p>
 	 */
 	@Override public void exitAlter_table_add_unique(SQLParser.Alter_table_add_uniqueContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterAlter_table_add_column(SQLParser.Alter_table_add_columnContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitAlter_table_add_column(SQLParser.Alter_table_add_columnContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterAlter_table_drop_column(SQLParser.Alter_table_drop_columnContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitAlter_table_drop_column(SQLParser.Alter_table_drop_columnContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *

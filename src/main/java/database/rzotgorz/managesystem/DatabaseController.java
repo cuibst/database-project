@@ -165,7 +165,7 @@ public class DatabaseController {
             return new MessageResult("No database is being used!", true);
         MetaHandler handler = metaManager.openMeta(currentUsingDatabase);
         handler.removeTable(tableName);
-        recordManager.deleteFile(rootPath + File.separator + getTablePath(tableName));
+        recordManager.deleteFile(getTablePath(tableName));
         return new MessageResult("ok");
     }
 
@@ -235,6 +235,34 @@ public class DatabaseController {
             createIndex(tableName + "." + foreignKey.columns, tableName, foreignKey.columns);
         if (!targetPack.handler.existsIndex(foreignKey.targetTable + "." + foreignKey.targetColumns))
             createIndex(foreignKey.targetTable + "." + foreignKey.targetColumns, foreignKey.targetTable, foreignKey.targetColumns);
+    }
+
+    public void insertColumn(String tableName, ColumnInfo columnInfo) {
+        try {
+            InfoAndHandler pack = getTableInfo(tableName);
+            FileHandler fileHandler = recordManager.openFile(getTablePath(tableName));
+            FileScanner fileScanner = new FileScanner(fileHandler);
+            List<List<Object>> datas = new ArrayList<>();
+            for (Record record : fileScanner) {
+                List<Object> data = pack.info.loadRecord(record);
+                deleteIndices(tableName, currentUsingDatabase, data, record.getRid());
+                data.add(columnInfo.getDefaultValue());
+                datas.add(data);
+            }
+//            recordManager.closeFile(tableName);
+            dropTable(tableName);
+            pack.info.insertColumn(columnInfo);
+            createTable(pack.info);
+            datas.forEach(data -> {
+                try {
+                    insertRecord(tableName, data);
+                } catch (UnsupportedEncodingException e) {
+                    e.printStackTrace();
+                }
+            });
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
     }
 
     public void setPrimary(String tableName, SQLTreeVisitor.PrimaryKey primaryKey) throws Exception {

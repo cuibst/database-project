@@ -157,6 +157,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
         }
     }
 
+
     @Override
     public ResultItem visitCreate_table(SQLParser.Create_tableContext ctx) {
         ColumnBundle bundle = (ColumnBundle) ctx.field_list().accept(this);
@@ -193,7 +194,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
                 String name = ((SQLParser.Normal_fieldContext) field).Identifier().getText();
                 ValueType type = (ValueType) ((SQLParser.Normal_fieldContext) field).type_().accept(this);
                 ColumnInfo columnInfo = new ColumnInfo(type.type, name, type.size, null);
-                if(((SQLParser.Normal_fieldContext) field).Null() != null)
+                if (((SQLParser.Normal_fieldContext) field).Null() != null)
                     columnInfo.setNotNull(true);
                 columns.put(name, columnInfo);
             } else if (field.getClass() == SQLParser.Foreign_key_fieldContext.class) {
@@ -219,11 +220,12 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
         return new ColumnBundle(columns, foreignKeyMap, primaryKey);
     }
 
+
     @Override
     public ColumnInfo visitNormal_field(SQLParser.Normal_fieldContext ctx) {
         ValueType type = (ValueType) ctx.type_().accept(this);
         ColumnInfo info = new ColumnInfo(type.type, ctx.Identifier().getText(), type.size, null);
-        if(ctx.Null() != null) {
+        if (ctx.Null() != null) {
             info.setNotNull(true);
         }
         return info;
@@ -416,6 +418,34 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     }
 
     @Override
+    public Object visitAlter_table_add_column(SQLParser.Alter_table_add_columnContext ctx) {
+        String tableName = ctx.Identifier().get(0).getText();
+        String columnName = ctx.Identifier().get(1).getText();
+        ValueType type = (ValueType) ctx.type_().accept(this);
+        ColumnInfo columnInfo;
+        if (ctx.value() != null) {
+            Object value = ctx.value().accept(this);
+            columnInfo = new ColumnInfo(type.type, columnName, type.size, value);
+        } else
+            columnInfo = new ColumnInfo(type.type, columnName, type.size, null);
+        if (ctx.Null() != null) {
+            if (columnInfo.getDefaultValue() == null)
+                throw new RuntimeException("Null value must have a default value! ");
+            columnInfo.setNotNull(true);
+        }
+
+        controller.insertColumn(tableName, columnInfo);
+        return new MessageResult(String.format("Add new column : %s type : %s in table : %s ", columnName, type.type, tableName));
+    }
+
+    @Override
+    public Object visitAlter_table_drop_column(SQLParser.Alter_table_drop_columnContext ctx) {
+        String tableName = ctx.Identifier().get(0).getText();
+        String columnName = ctx.Identifier().get(1).getText();
+        return new MessageResult(String.format("Drop column : %s in table : %s ", columnName, tableName));
+    }
+
+    @Override
     public Object visitSelect_table(SQLParser.Select_tableContext ctx) {
         List<String> tableNames = ((PrimaryKey) ctx.identifiers().accept(this)).fields;
         List<WhereClause> clauses = (ctx.where_and_clause() == null) ? new ArrayList<>() : (List<WhereClause>) ctx.where_and_clause().accept(this);
@@ -544,4 +574,6 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
             return new Column(null, ctx.Identifier(0).getText());
         return new Column(ctx.Identifier(0).getText(), ctx.Identifier(1).getText());
     }
+
+
 }

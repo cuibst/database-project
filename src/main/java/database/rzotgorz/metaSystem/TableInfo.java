@@ -91,6 +91,9 @@ public class TableInfo implements Serializable {
 
     public void updateParams() {
         int __ = 0;
+        this.typeList.clear();
+        this.colIndex.clear();
+        this.sizeList.clear();
         for (Map.Entry<String, ColumnInfo> entry : columns.entrySet()) {
             this.colIndex.put(entry.getValue().getName(), __);
             __++;
@@ -117,6 +120,7 @@ public class TableInfo implements Serializable {
         this.updateParams();
     }
 
+
     public void addForeign(String name, SQLTreeVisitor.ForeignKey foreign) {
         this.foreign.put(name, foreign);
     }
@@ -130,6 +134,9 @@ public class TableInfo implements Serializable {
     }
 
     public byte[] buildRecord(List<String> list) {
+        log.info("type:{}", typeList.toString());
+        log.info("value:{}", list.toString());
+        log.info("typeSize:{} valueSize:{}", typeList.size(), list.size());
         return Parser.encode(this.sizeList, this.typeList, this.totalSize, list);
     }
 
