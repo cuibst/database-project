@@ -27,6 +27,7 @@ import java.io.*;
 import java.nio.file.NotDirectoryException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 
 @Slf4j
 public class Main {
@@ -74,8 +75,20 @@ public class Main {
         Terminal terminal;
         if (in.equals(System.in))
             terminal = TerminalBuilder.builder().system(true).build();
-        else
-            terminal = TerminalBuilder.builder().system(false).streams(in, System.out).build();
+        else {
+            Scanner scanner = new Scanner(in);
+            StringBuilder builder = new StringBuilder();
+            while(scanner.hasNextLine()) {
+                String currentLine = scanner.nextLine();
+                builder.append(currentLine);
+                if(currentLine.stripTrailing().endsWith(";")) {
+                    Object r = controller.execute(builder.toString());
+                    printResults(r, out);
+                    builder = new StringBuilder();
+                }
+            }
+            return;
+        }
 
         Completer createCompleter = new ArgumentCompleter(
                 new StringsCompleter("CREATE"),
