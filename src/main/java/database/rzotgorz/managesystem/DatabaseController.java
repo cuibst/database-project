@@ -585,14 +585,14 @@ public class DatabaseController {
             }
             InfoAndHandler targetPack = getTableInfo(foreignKey.targetTable);
             if (targetPack.info.getRootId(foreignKey.targetColumns) != null) {
-                log.info("index");
                 int rootId = targetPack.info.getRootId(foreignKey.targetColumns);
                 FileIndex index = indexManager.openedIndex(currentUsingDatabase, foreignKey.targetTable, rootId, foreignKey.targetColumns.toString());
                 List<RID> rids = index.search(new IndexContent(indexValue));
-                if (rids == null || rids.isEmpty())
+                if (rids == null || rids.isEmpty()) {
+                    log.info("{}", entry.getValue());
                     return true;
+                }
             } else {
-                log.info("brute force");
                 RecordDataPack recordDataPack = searchIndices(foreignKey.targetTable, clauses);
                 if (recordDataPack.records == null || recordDataPack.records.size() == 0)
                     return true;

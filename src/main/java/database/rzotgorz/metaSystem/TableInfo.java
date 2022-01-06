@@ -134,9 +134,6 @@ public class TableInfo implements Serializable {
     }
 
     public byte[] buildRecord(List<String> list) {
-        log.info("type:{}", typeList.toString());
-        log.info("value:{}", list.toString());
-        log.info("typeSize:{} valueSize:{}", typeList.size(), list.size());
         return Parser.encode(this.sizeList, this.typeList, this.totalSize, list);
     }
 
