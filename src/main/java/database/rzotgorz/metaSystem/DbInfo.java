@@ -38,7 +38,6 @@ public class DbInfo implements Serializable {
     }
 
     public void insertTable(String name, TableInfo tableInfo) {
-        log.info(tbMap.toString());
         if (this.tbMap.containsKey(name))
             throw new RuntimeException(String.format("Table named :%s already exists", name));
         this.tbMap.put(name, tableInfo);

@@ -30,7 +30,6 @@ public class InterNode extends TreeNode {
     }
 
     public JSONObject split() {
-        log.info("internode split!");
         int mid = (int) Math.floor((childKeys.size() + 1) / 2.0);
         List<IndexContent> newKeys = new ArrayList<>();
         newKeys.addAll(this.childKeys.subList(mid, childKeys.size()));
@@ -42,10 +41,10 @@ public class InterNode extends TreeNode {
         this.childNodes = this.childNodes.subList(0, mid);
         this.childKeys = this.childKeys.subList(0, mid);
         object.put("maxKey", newKeys.get(0));
-        if (this.childNodes == null)
-            log.info("old root childNodes is null");
-        if (newNodes == null)
-            log.info("new root childNodes is null");
+//        if (this.childNodes == null)
+//            log.info("old root childNodes is null");
+//        if (newNodes == null)
+//            log.info("new root childNodes is null");
         return object;
     }
 

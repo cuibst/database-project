@@ -53,7 +53,6 @@ public class FileIndex {
     }
 
     public FileIndex(int rootId, IndexHandler handler, String dbName, List<String> types, String tableName, String indexName) {
-        log.info("rootId {} ", rootId);
         this.rootId = rootId;
         this.tableName = tableName;
         this.modified = false;

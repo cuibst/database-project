@@ -40,7 +40,7 @@ public class IndexContent implements Comparable {
                     val2 = (Integer) indexList.get(i);
                 }
                 if(val1 != val2)
-                    return val1 < val2 ? -1 : 1;
+                    return val1 < val2 ? 1 : -1;
                 continue;
             }
             int ans = indexList.get(i).compareTo(list.get(i));
