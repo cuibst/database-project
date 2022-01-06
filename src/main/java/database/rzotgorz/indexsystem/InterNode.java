@@ -156,6 +156,7 @@ public class InterNode extends TreeNode {
             low--;
         if (high == childNodes.size())
             high--;
+        log.info("low: {}, high: {}", low, high);
         if (high == -1)
             return null;
         for (int i = low; i <= high; i++) {

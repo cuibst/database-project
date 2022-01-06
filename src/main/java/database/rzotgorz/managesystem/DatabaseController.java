@@ -474,7 +474,6 @@ public class DatabaseController {
 
     public boolean checkAnyUnique(String tableName, List<String> columns, List<Object> values, RID currentRow) throws UnsupportedEncodingException {
         InfoAndHandler infoPack = getTableInfo(tableName);
-        log.info(infoPack.info.getIndicesMap().toString());
         if (infoPack.info.getRootId(columns) != null) {
             int rootId = infoPack.info.getRootId(columns);
             FileIndex index = indexManager.openedIndex(currentUsingDatabase, tableName, rootId, columns.toString());
@@ -588,8 +587,11 @@ public class DatabaseController {
                     if (targetPack.info.getRootId(foreignKey.targetColumns) != null) {
                         log.info("index");
                         int rootId = targetPack.info.getRootId(foreignKey.targetColumns);
-                        FileIndex index = indexManager.openedIndex(currentUsingDatabase, foreignKey.targetTable, rootId, foreignKey.targetColumns.toString());
+                        FileIndex index = indexManager.openedIndex(currentUsingDatabase, tableInfo.getName(), rootId, foreignKey.columns.toString());
+                        log.info("checking {} {}", tableInfo.getName(), foreignKey.columns);
+                        log.info("content {}", originContent.getIndexList());
                         List<RID> rids = index.search(originContent);
+                        log.info("return rids {}", rids);
                         if (rids != null && !rids.isEmpty())
                             return true;
                     } else {
@@ -597,9 +599,8 @@ public class DatabaseController {
                         List<WhereClause> clauses = new ArrayList<>();
                         for (int i = 0; i < foreignKey.columns.size(); i++) {
                             String column = foreignKey.columns.get(i);
-                            String targetColumn = foreignKey.targetColumns.get(i);
                             Object value = values.get(pack.info.getIndex(column));
-                            clauses.add(new ValueOperatorClause(foreignKey.targetTable, targetColumn, "=", value));
+                            clauses.add(new ValueOperatorClause(tableInfo.getName(), column, "=", value));
                         }
                         RecordDataPack recordDataPack = searchIndices(foreignKey.targetTable, clauses);
                         if (recordDataPack.records != null && recordDataPack.records.size() != 0)
@@ -681,7 +682,6 @@ public class DatabaseController {
             boolean flag = false;
             for (int i = 0; i < dataPack.records.size(); i++) {
                 List<Object> values = pack.info.loadRecord(dataPack.records.get(i));
-                checkConstraints(tableName, dataPack.data.get(i), dataPack.records.get(i).getRid());
                 setClauses.forEach(clause -> {
                     int cnt = 0;
                     for (Map.Entry<String, ColumnInfo> entry : pack.info.getColumns().entrySet()) {
@@ -696,6 +696,7 @@ public class DatabaseController {
                         cnt++;
                     }
                 });
+                checkConstraints(tableName, values, dataPack.records.get(i).getRid());
                 flag |= checkReverseForeignKeyConstraint(tableName, dataPack.data.get(i), values);
                 if (flag)
                     throw new RuntimeException("Cannot update line due to reverse foreign key");
@@ -733,7 +734,7 @@ public class DatabaseController {
                     handler.updateRecord(record);
                     deleteIndices(tableName, currentUsingDatabase, dataPack.data.get(j), record.getRid());
                     insertIndices(tableName, currentUsingDatabase, values1, record.getRid());
-                    this.insertRecord(tableName, values);
+                    this.insertRecord(tableName, values1);
                 } catch (UnsupportedEncodingException e) {
                     e.printStackTrace();
                 }

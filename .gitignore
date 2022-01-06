@@ -36,6 +36,4 @@ buildNumber.properties
 
 
 data/
-csv/
-testcases/
 *.out
