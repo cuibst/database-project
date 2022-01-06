@@ -164,7 +164,6 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
         ResultItem result = controller.createTable(new TableInfo(tableName, bundle.columnInfos));
         if (((MessageResult) result).isError())
             return result;
-        log.info(bundle.foreignKeys.toString());
         try {
             for (Map.Entry<String, ForeignKey> entry : bundle.foreignKeys.entrySet()) {
                 controller.addForeignKeyConstraint(tableName, entry.getValue());
@@ -196,9 +195,9 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
                 columns.put(name, new ColumnInfo(type.type, name, type.size, null));
             } else if (field.getClass() == SQLParser.Foreign_key_fieldContext.class) {
                 ForeignKey foreignKey = (ForeignKey) field.accept(this);
-                if(foreignKey.foreignKeyName == null)
+                if (foreignKey.foreignKeyName == null)
                     foreignKey.foreignKeyName = foreignKey.targetTable + "." + foreignKey.targetColumns.toString();
-                if(foreignKeyMap.containsKey(foreignKey.foreignKeyName))
+                if (foreignKeyMap.containsKey(foreignKey.foreignKeyName))
                     throw new RuntimeException("Foreign Key parse error, duplicated foreign keys");
                 foreignKeyMap.put(foreignKey.foreignKeyName, foreignKey);
             } else if (field.getClass() == SQLParser.Primary_key_fieldContext.class) {
@@ -233,7 +232,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     public ForeignKey visitForeign_key_field(SQLParser.Foreign_key_fieldContext ctx) {
         List<String> columns = ((PrimaryKey) ctx.identifiers(0).accept(this)).fields;
         List<String> targetColumns = ((PrimaryKey) ctx.identifiers(1).accept(this)).fields;
-        if(ctx.Identifier().size() == 1) {
+        if (ctx.Identifier().size() == 1) {
             String targetTable = ctx.Identifier(0).getText();
             return new ForeignKey(null, targetTable, columns, targetColumns);
         } else {
@@ -332,7 +331,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     @Override
     public Object visitAlter_add_index(SQLParser.Alter_add_indexContext ctx) {
         String tableName = ctx.Identifier().getText();
-        List<String> columns = ((PrimaryKey)ctx.identifiers().accept(this)).fields;
+        List<String> columns = ((PrimaryKey) ctx.identifiers().accept(this)).fields;
         try {
             controller.createIndex(tableName + "." + columns, tableName, columns);
         } catch (Exception e) {
@@ -344,7 +343,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     @Override
     public Object visitAlter_drop_index(SQLParser.Alter_drop_indexContext ctx) {
         String tableName = ctx.Identifier().getText();
-        List<String> columns = ((PrimaryKey)ctx.identifiers().accept(this)).fields;
+        List<String> columns = ((PrimaryKey) ctx.identifiers().accept(this)).fields;
         for (String column : columns) {
             try {
                 controller.removeIndex(column);
@@ -400,7 +399,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     @Override
     public Object visitAlter_table_add_unique(SQLParser.Alter_table_add_uniqueContext ctx) {
         String tableName = ctx.Identifier().getText();
-        List<String> columns = ((PrimaryKey)ctx.identifiers().accept(this)).fields;
+        List<String> columns = ((PrimaryKey) ctx.identifiers().accept(this)).fields;
         try {
             controller.addUniqueConstraint(tableName, tableName + "." + columns.toString() + ".unique", columns);
         } catch (Exception e) {

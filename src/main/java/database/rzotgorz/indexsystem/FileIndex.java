@@ -53,6 +53,7 @@ public class FileIndex {
     }
 
     public FileIndex(int rootId, IndexHandler handler, String dbName, List<String> types, String tableName, String indexName) {
+        log.info("rootId {} ", rootId);
         this.rootId = rootId;
         this.tableName = tableName;
         this.modified = false;
@@ -65,6 +66,7 @@ public class FileIndex {
     }
 
     public FileIndex(int rootId, IndexHandler handler, String dbName, String tableName, String indexName) {
+        log.info("rootId {}", rootId);
         this.tableName = tableName;
         this.rootId = rootId;
         this.modified = false;
@@ -76,6 +78,7 @@ public class FileIndex {
     }
 
     public TreeNode buildNode(int pageId) {
+//        log.info("buildNode pageId {}", pageId);
         this.modified = true;
         byte[] dataBytes = indexHandler.getPage(pageId);
         byte[] msgBytes = new byte[40];

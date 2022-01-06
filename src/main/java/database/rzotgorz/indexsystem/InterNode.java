@@ -85,6 +85,8 @@ public class InterNode extends TreeNode {
                 childNodes.add(index + 1, node);
             }
         }
+        log.info("childNodes{}", childNodes.toString());
+        log.info("childKeys{}", childKeys.toString());
     }
 
     @Override
@@ -136,8 +138,6 @@ public class InterNode extends TreeNode {
         for (int i = 0; i < this.childKeys.size(); i++) {
             byte[] dataBytes;
             dataBytes = IndexUtility.turnToBytes(this.typeSize, this.childKeys.get(i), this.indexType);
-            log.info(String.valueOf(dataBytes.length));
-            log.info(String.valueOf(this.typeSize));
             System.arraycopy(dataBytes, 0, bytes, head, dataBytes.length);
             head += this.typeSize;
             byte[] pageIdByte = ByteLongConverter.long2Bytes(this.childNodes.get(i).pageId);
@@ -149,6 +149,7 @@ public class InterNode extends TreeNode {
 
     @Override
     public List<RID> search(IndexContent key) {
+        log.info("pageId {} ", this.pageId);
         int low = lowerBound(key);
         int high = upperBound(key);
         List<RID> list = new ArrayList<>();

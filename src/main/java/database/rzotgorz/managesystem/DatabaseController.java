@@ -275,7 +275,6 @@ public class DatabaseController {
 
     public void createIndex(String indexName, String tableName, List<String> columnName) throws Exception {
         InfoAndHandler pack = getTableInfo(tableName);
-        log.info(indexName);
         if (pack.handler.existsIndex(indexName))
             throw new RuntimeException(String.format("Indices %s already exists!", indexName));
         if (pack.info.existsIndex(columnName.toString())) {
@@ -583,10 +582,10 @@ public class DatabaseController {
                         if (originContent.compareTo(newContent) == 0)
                             continue;
                     }
-                    InfoAndHandler targetPack = getTableInfo(foreignKey.targetTable);
-                    if (targetPack.info.getRootId(foreignKey.targetColumns) != null) {
+//                    InfoAndHandler targetPack = getTableInfo(foreignKey.targetTable);
+                    if (tableInfo.getRootId(foreignKey.targetColumns) != null) {
                         log.info("index");
-                        int rootId = targetPack.info.getRootId(foreignKey.targetColumns);
+                        int rootId = tableInfo.getRootId(foreignKey.targetColumns);
                         FileIndex index = indexManager.openedIndex(currentUsingDatabase, tableInfo.getName(), rootId, foreignKey.columns.toString());
                         log.info("checking {} {}", tableInfo.getName(), foreignKey.columns);
                         log.info("content {}", originContent.getIndexList());
