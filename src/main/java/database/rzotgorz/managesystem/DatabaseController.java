@@ -385,7 +385,10 @@ public class DatabaseController {
             if ((!(clause instanceof ValueOperatorClause)) || (clause.getTableName() != null && !clause.getTableName().equals(tableName)))
                 return;
             Integer index = pack.info.getRootId(new ArrayList<>(List.of(clause.getColumnName())));
+            log.info("{}", pack.info.getIndicesMap());
+            log.info("table: {}, column: {}, rootId: {}", tableName, new ArrayList<>(List.of(clause.getColumnName())), index);
             if (index != null && pack.info.existsIndex(tableName + "." + new ArrayList<>(List.of(clause.getColumnName())))) {
+                log.info("in index");
                 String operator = ((ValueOperatorClause) clause).getOperator();
                 String columnName = clause.getColumnName();
                 Interval interval = indexMap.get(columnName);
@@ -424,13 +427,13 @@ public class DatabaseController {
             IndexContent upper = new IndexContent(new ArrayList<>(List.of(entry.getValue().upper)));
             if (result == null) {
                 ArrayList<RID> res = index.range(lower, upper);
-//                log.info("{}", res);
                 if (res == null)
                     return null;
-                (result = new LinkedHashSet<>()).addAll(res);
+                (result = new TreeSet<>(Comparator.naturalOrder())).addAll(res);
             } else
                 result.retainAll(index.range(lower, upper));
         }
+        log.info("Filter size: {}", result == null ? 0 : result.size());
         return result;
     }
 
@@ -471,6 +474,7 @@ public class DatabaseController {
                 recordDataPack.data.add(values);
             }
         }
+        log.info("{} records received", cnt);
         return recordDataPack;
     }
 

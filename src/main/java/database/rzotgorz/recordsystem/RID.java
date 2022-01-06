@@ -5,7 +5,7 @@ import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
-public class RID {
+public class RID implements Comparable<RID> {
     private int pageId;
     private int slotId;
     public RID(int pageId,int slotId){
@@ -37,5 +37,14 @@ public class RID {
     @Override
     public String toString() {
         return String.format("(%d, %d)", pageId, slotId);
+    }
+
+    @Override
+    public int compareTo(RID o) {
+        if(pageId != o.pageId)
+            return pageId < o.pageId ? -1 : 1;
+        else if(slotId != o.slotId)
+            return slotId < o.slotId ? -1 : 1;
+        return 0;
     }
 }

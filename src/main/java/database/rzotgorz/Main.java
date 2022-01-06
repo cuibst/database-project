@@ -86,6 +86,7 @@ public class Main {
                 }
             }
             out.close();
+            controller.shutdown();
             return;
         }
 
