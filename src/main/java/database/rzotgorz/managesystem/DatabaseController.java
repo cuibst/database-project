@@ -501,6 +501,17 @@ public class DatabaseController {
         return !((pack.records != null && pack.records.size() >= 1 && currentRow != null && currentRow.equals(pack.records.get(0).getRid())) || pack.records == null || pack.records.size() == 0);
     }
 
+    public boolean checkNotNullConstraint(String tableName, List<Object> values) {
+        InfoAndHandler pack = getTableInfo(tableName);
+        pack.info.getColumns().forEach((name, columnInfo) -> {
+            Object value = values.get(pack.info.getIndex(name));
+            log.info("value: {}, not null: {}", value, columnInfo.isNotNull());
+            if(value == null && columnInfo.isNotNull())
+                throw new RuntimeException(String.format("Not Null constraint violated on column %d, %s", pack.info.getIndex(name), name));
+        });
+        return false;
+    }
+
     public boolean checkPrimaryConstraint(String tableName, List<Object> values, RID currentRow) throws UnsupportedEncodingException {
         InfoAndHandler pack = getTableInfo(tableName);
         if (pack.info.getPrimary().size() == 0)
@@ -615,6 +626,8 @@ public class DatabaseController {
     }
 
     public void checkConstraints(String tableName, List<Object> values, RID currentRow) throws UnsupportedEncodingException {
+        if (checkNotNullConstraint(tableName, values))
+            throw new RuntimeException("Not Null constraint violated in table " + tableName + ".");
         if (checkPrimaryConstraint(tableName, values, currentRow))
             throw new RuntimeException("Primary key constraint violated in table " + tableName + ".");
         if (checkUniqueConstraint(tableName, values, currentRow))

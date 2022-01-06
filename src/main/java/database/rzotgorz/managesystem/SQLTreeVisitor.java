@@ -192,7 +192,10 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
             if (field.getClass() == SQLParser.Normal_fieldContext.class) {
                 String name = ((SQLParser.Normal_fieldContext) field).Identifier().getText();
                 ValueType type = (ValueType) ((SQLParser.Normal_fieldContext) field).type_().accept(this);
-                columns.put(name, new ColumnInfo(type.type, name, type.size, null));
+                ColumnInfo columnInfo = new ColumnInfo(type.type, name, type.size, null);
+                if(((SQLParser.Normal_fieldContext) field).Null() != null)
+                    columnInfo.setNotNull(true);
+                columns.put(name, columnInfo);
             } else if (field.getClass() == SQLParser.Foreign_key_fieldContext.class) {
                 ForeignKey foreignKey = (ForeignKey) field.accept(this);
                 if (foreignKey.foreignKeyName == null)
@@ -219,7 +222,11 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     @Override
     public ColumnInfo visitNormal_field(SQLParser.Normal_fieldContext ctx) {
         ValueType type = (ValueType) ctx.type_().accept(this);
-        return new ColumnInfo(type.type, ctx.Identifier().getText(), type.size, null);
+        ColumnInfo info = new ColumnInfo(type.type, ctx.Identifier().getText(), type.size, null);
+        if(ctx.Null() != null) {
+            info.setNotNull(true);
+        }
+        return info;
     }
 
     @Override

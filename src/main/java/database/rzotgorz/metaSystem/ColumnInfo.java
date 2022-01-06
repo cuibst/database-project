@@ -12,6 +12,7 @@ public class ColumnInfo implements Serializable {
     private String name;
     private Integer size;
     private Object defaultValue;
+    private boolean notNull;
 
     public ColumnInfo(String type, String name, int size, Object defaultValue) {
         this.type = type;
@@ -26,6 +27,7 @@ public class ColumnInfo implements Serializable {
         } else if (this.type.equals("VARCHAR")) {
             this.size = size + 1;
         }
+        notNull = false;
     }
 
     public int getSize() {
