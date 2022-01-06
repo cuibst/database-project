@@ -384,8 +384,12 @@ public class DatabaseController {
         clauses.forEach(clause -> {
             if ((!(clause instanceof ValueOperatorClause)) || (clause.getTableName() != null && !clause.getTableName().equals(tableName)))
                 return;
+            log.info(pack.info.getIndicesMap().toString());
+            log.info(new ArrayList<>(List.of(clause.getColumnName())).toString());
             Integer index = pack.info.getRootId(new ArrayList<>(List.of(clause.getColumnName())));
-            if (index != null && pack.info.existsIndex(clause.getColumnName())) {
+            log.info("Index: {}", index);
+            if (index != null && pack.info.existsIndex(tableName + "." + new ArrayList<>(List.of(clause.getColumnName())))) {
+                log.info("Visiting indexMap");
                 String operator = ((ValueOperatorClause) clause).getOperator();
                 String columnName = clause.getColumnName();
                 Interval interval = indexMap.get(columnName);
@@ -419,6 +423,7 @@ public class DatabaseController {
         });
         Set<RID> result = null;
         for (Map.Entry<String, Interval> entry : indexMap.entrySet()) {
+            log.info("Searching Index: rootId:{} name:{}", pack.info.getRootId(new ArrayList<>(List.of(entry.getKey()))), new ArrayList<>(List.of(entry.getKey())).toString());
             FileIndex index = indexManager.openedIndex(currentUsingDatabase, tableName, pack.info.getRootId(new ArrayList<>(List.of(entry.getKey()))), new ArrayList<>(List.of(entry.getKey())).toString());
             IndexContent lower = new IndexContent(new ArrayList<>(List.of(entry.getValue().lower)));
             IndexContent upper = new IndexContent(new ArrayList<>(List.of(entry.getValue().upper)));
@@ -456,8 +461,11 @@ public class DatabaseController {
         } else {
             recordIterable = new FileScanner(handler);
         }
+        log.info("Iterator created");
         RecordDataPack recordDataPack = new RecordDataPack(new ArrayList<>(), new ArrayList<>());
+        int cnt = 0;
         for (Record record : recordIterable) {
+            cnt ++;
             List<Object> values = pack.info.loadRecord(record);
             boolean flag = true;
             for (Function function : functionList) {
@@ -468,6 +476,7 @@ public class DatabaseController {
                 recordDataPack.data.add(values);
             }
         }
+        log.info("{} records scanned", cnt);
         return recordDataPack;
     }
 
@@ -958,6 +967,7 @@ public class DatabaseController {
                 selector.setTableName(tables.get(0));
             }
         });
+        log.info("Finish creating reverse table");
 
         if (group != null && group.tableName == null)
             group.tableName = tableNames.get(0);
@@ -972,6 +982,7 @@ public class DatabaseController {
         Map<String, TableResult> resultMap = new HashMap<>();
         for (String tableName : tableNames) {
             try {
+                log.info("Scanning {}", tableName);
                 resultMap.put(tableName, scanIndices(tableName, clauses));
             } catch (UnsupportedEncodingException e) {
                 return new MessageResult(e.getMessage(), true);
@@ -985,6 +996,9 @@ public class DatabaseController {
         else {
             result = bruteForceJoin(resultMap, clauses);
         }
+
+        log.info("Scan finished");
+
         List<String> headers;
         List<List<Object>> actualData = new ArrayList<>();
         if (group != null) {
@@ -1017,6 +1031,7 @@ public class DatabaseController {
         } else {
             if (selectors.get(0).getType() == Selector.SelectorType.ALL) {
                 assert selectors.size() == 1;
+                log.info("returned");
                 return result;
             } else if (types.contains(Selector.SelectorType.FIELD)) {
                 headers = new ArrayList<>();
@@ -1069,7 +1084,8 @@ public class DatabaseController {
         if (limit == -1)
             data = data.subList(offset, data.size());
         else
-            data = data.subList(offset, offset + limit);
+            data = data.subList(offset, Math.min(offset + limit, data.size()));
+        log.info("Return to context tree");
         return new TableResult(((TableResult) result).getHeaders(), data);
     }
 
@@ -1102,7 +1118,7 @@ public class DatabaseController {
     }
 
     public Object execute(String sql) {
-        System.out.printf("Executing: %s%n", sql);
+//        System.out.printf("Executing: %s%n", sql);
         visitor.getTimeDelta();
         CharStream stream = CharStreams.fromString(sql);
         SQLLexer lexer = new SQLLexer(stream);
