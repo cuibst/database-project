@@ -175,7 +175,7 @@ public class Main {
         LineReader lineReader = LineReaderBuilder.builder().terminal(terminal).completer(aggregateCompleter).build();
         StringBuilder line = new StringBuilder();
         while (true) {
-            String prompt = controller.getCurrentUsingDatabase() == null ? "llhdb> " : String.format("llhdb(%s)> ", controller.getCurrentUsingDatabase());
+            String prompt = controller.getCurrentUsingDatabase() == null ? "TeaDB> " : String.format("TeaDB(%s)> ", controller.getCurrentUsingDatabase());
             if (!line.toString().equals(""))
                 prompt = " ".repeat(prompt.length() - 3) + "-> ";
             String currentLine = "";
