@@ -65,7 +65,6 @@ public class FileIndex {
     }
 
     public FileIndex(int rootId, IndexHandler handler, String dbName, String tableName, String indexName) {
-        log.info("rootId {}", rootId);
         this.tableName = tableName;
         this.rootId = rootId;
         this.modified = false;
@@ -73,11 +72,9 @@ public class FileIndex {
         this.dbName = dbName;
         this.indexName = indexName;
         this.load();
-        this.rootNode = new InterNode(rootId, -1, new ArrayList<>(), new ArrayList<>(), indexHandler, this.typeSize, this.indexType);
     }
 
     public TreeNode buildNode(int pageId) {
-//        log.info("buildNode pageId {}", pageId);
         this.modified = true;
         byte[] dataBytes = indexHandler.getPage(pageId);
         byte[] msgBytes = new byte[40];
@@ -127,6 +124,8 @@ public class FileIndex {
                 childNodes.add(this.buildNode((int) ByteLongConverter.bytes2Long(childNode)));
                 head += this.typeSize + 8;
             }
+//            log.info("childKeys:{}", childKeys);
+//            log.info("childNodes:{}", childNodes);
             node = new InterNode(pageId, parentId, childNodes, childKeys, this.indexHandler, this.typeSize, this.indexType);
         }
         return node;
@@ -156,21 +155,22 @@ public class FileIndex {
     }
 
     public void load() {
-        byte[] dataBytes = indexHandler.getPage(this.rootId);
-        long[] data = processByte(dataBytes);
-        long nodeType = data[0];
-        long parentId = data[1];
-        assert (nodeType == 0);
-        assert (parentId == -1);
+//        byte[] dataBytes = indexHandler.getPage(this.rootId);
+//        long[] data = processByte(dataBytes);
+//        long nodeType = data[0];
+//        long parentId = data[1];
+//        assert (nodeType == 0);
+//        assert (parentId == -1);
         String typePath = "data" + File.separator + dbName + File.separator + tableName + indexName + ".type";
         File file = new File(typePath);
         try {
             FileInputStream fis = new FileInputStream(file);
             BufferedInputStream bis = new BufferedInputStream(fis);
             byte[] str = bis.readAllBytes();
+            bis.close();
             StringBuilder builder = new StringBuilder();
             for (int i = 0; i < str.length; i++) {
-                builder.append(str[i]);
+                builder.append((char) str[i]);
             }
             String[] strs = builder.toString().split(",");
             List<String> list = new ArrayList<>();
@@ -179,10 +179,10 @@ public class FileIndex {
             }
             this.indexType = list;
             typeSize = IndexUtility.calcSize(list);
-
         } catch (IOException e) {
             throw new RuntimeException("IndexType not exists!! This table cannot be used");
         }
+//        this.rootNode = new InterNode(rootId, -1, new ArrayList<>(), new ArrayList<>(), indexHandler, this.typeSize, this.indexType);
         this.rootNode = this.buildNode(rootId);
     }
 
@@ -206,6 +206,7 @@ public class FileIndex {
             }
             byte[] str = s.getBytes(StandardCharsets.UTF_8);
             bis.write(str);
+            bis.close();
         } catch (IOException e) {
             throw new RuntimeException("IndexType not exists!! This table cannot be used");
         }
@@ -229,8 +230,6 @@ public class FileIndex {
 
     public List<RID> search(IndexContent key) {
 //        log.info(String.valueOf(this.rootNode.search(key).size()));
-        if (this.rootNode == null)
-            log.info("yes");
         return this.rootNode.search(key);
     }
 

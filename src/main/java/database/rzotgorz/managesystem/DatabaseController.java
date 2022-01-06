@@ -386,10 +386,7 @@ public class DatabaseController {
             if ((!(clause instanceof ValueOperatorClause)) || (clause.getTableName() != null && !clause.getTableName().equals(tableName)))
                 return;
             Integer index = pack.info.getRootId(new ArrayList<>(List.of(clause.getColumnName())));
-            log.info("{}", pack.info.getIndicesMap());
-            log.info("table: {}, column: {}, rootId: {}", tableName, new ArrayList<>(List.of(clause.getColumnName())), index);
             if (index != null && pack.info.existsIndex(tableName + "." + new ArrayList<>(List.of(clause.getColumnName())))) {
-                log.info("in index");
                 String operator = ((ValueOperatorClause) clause).getOperator();
                 String columnName = clause.getColumnName();
                 Interval interval = indexMap.get(columnName);
@@ -429,6 +426,8 @@ public class DatabaseController {
             if (result == null) {
                 ArrayList<RID> res = index.range(lower, upper);
                 if (res == null)
+                    log.info("yes");
+                if (res == null)
                     return null;
                 (result = new TreeSet<>(Comparator.naturalOrder())).addAll(res);
             } else
@@ -464,7 +463,7 @@ public class DatabaseController {
         RecordDataPack recordDataPack = new RecordDataPack(new ArrayList<>(), new ArrayList<>());
         int cnt = 0;
         for (Record record : recordIterable) {
-            cnt ++;
+            cnt++;
             List<Object> values = pack.info.loadRecord(record);
             boolean flag = true;
             for (Function function : functionList) {
@@ -505,8 +504,8 @@ public class DatabaseController {
         InfoAndHandler pack = getTableInfo(tableName);
         pack.info.getColumns().forEach((name, columnInfo) -> {
             Object value = values.get(pack.info.getIndex(name));
-            log.info("value: {}, not null: {}", value, columnInfo.isNotNull());
-            if(value == null && columnInfo.isNotNull())
+//            log.info("value: {}, not null: {}", value, columnInfo.isNotNull());
+            if (value == null && columnInfo.isNotNull())
                 throw new RuntimeException(String.format("Not Null constraint violated on column %d, %s", pack.info.getIndex(name), name));
         });
         return false;

@@ -41,22 +41,11 @@ public class InterNode extends TreeNode {
         this.childNodes = this.childNodes.subList(0, mid);
         this.childKeys = this.childKeys.subList(0, mid);
         object.put("maxKey", newKeys.get(0));
-//        if (this.childNodes == null)
-//            log.info("old root childNodes is null");
-//        if (newNodes == null)
-//            log.info("new root childNodes is null");
         return object;
     }
 
     @Override
     public void insert(IndexContent key, RID rid) {
-//        int sum = 0;
-//        for (int i = 0; i < childNodes.size(); i++) {
-//            sum += childNodes.get(i).getChildKeys().size();
-//        }
-//        log.info(String.valueOf(sum));
-//        log.info("childKeys{}", childKeys);
-//        log.info(key.toString());
         int index = this.lowerBound(key);
         if (index == -1) {
             this.childKeys.add(key);
@@ -149,6 +138,8 @@ public class InterNode extends TreeNode {
             System.arraycopy(pageIdByte, 0, bytes, head, 8);
             head += 8;
         }
+        byte[] test = new byte[8];
+        System.arraycopy(bytes, 16, test, 0, 8);
         return bytes;
     }
 

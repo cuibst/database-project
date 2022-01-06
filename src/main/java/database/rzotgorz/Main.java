@@ -193,7 +193,7 @@ public class Main {
             }
             line.append(currentLine);
             if (line.toString().equals("exit")) {
-                System.out.println("(。・_・)/~~~ bye!");
+                System.out.println("(.'_')/~~~ bye!");
                 break;
             }
             if (currentLine.stripTrailing().endsWith(";")) {
