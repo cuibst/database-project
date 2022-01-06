@@ -584,17 +584,12 @@ public class DatabaseController {
                     }
 //                    InfoAndHandler targetPack = getTableInfo(foreignKey.targetTable);
                     if (tableInfo.getRootId(foreignKey.targetColumns) != null) {
-                        log.info("index");
                         int rootId = tableInfo.getRootId(foreignKey.targetColumns);
                         FileIndex index = indexManager.openedIndex(currentUsingDatabase, tableInfo.getName(), rootId, foreignKey.columns.toString());
-                        log.info("checking {} {}", tableInfo.getName(), foreignKey.columns);
-                        log.info("content {}", originContent.getIndexList());
                         List<RID> rids = index.search(originContent);
-                        log.info("return rids {}", rids);
                         if (rids != null && !rids.isEmpty())
                             return true;
                     } else {
-                        log.info("brute force");
                         List<WhereClause> clauses = new ArrayList<>();
                         for (int i = 0; i < foreignKey.columns.size(); i++) {
                             String column = foreignKey.columns.get(i);
@@ -650,7 +645,6 @@ public class DatabaseController {
 
     public void insertIndices(String tableName, String databaseName, List<Object> values, RID rid) {
         InfoAndHandler pack = getTableInfo(tableName);
-        log.info(pack.info.getIndicesMap().toString());
         pack.info.getIndicesMap().forEach((indexName, rootId) -> {
             DbInfo.IndexInfo info = pack.handler.getDbInfo().getIndexInfo(indexName);
             List<Comparable> value = new ArrayList<>();

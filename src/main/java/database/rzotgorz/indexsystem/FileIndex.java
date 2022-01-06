@@ -141,7 +141,6 @@ public class FileIndex {
             InterNode root = new InterNode(newPageId, -1, new ArrayList<>(), new ArrayList<>(), indexHandler, this.typeSize, this.indexType);
             this.rootNode.parentId = newPageId;
             int newPageStoreId = indexHandler.createNewPage();
-//            System.out.println(rootNode.getChildKeys());
             JSONObject object = this.rootNode.split();
             IndexContent minKey = rootNode.childKeys.get(0);
             List<IndexContent> newKeys = (ArrayList<IndexContent>) object.get("newKeys");
@@ -230,6 +229,9 @@ public class FileIndex {
     }
 
     public List<RID> search(IndexContent key) {
+//        log.info(String.valueOf(this.rootNode.search(key).size()));
+        if (this.rootNode == null)
+            log.info("yes");
         return this.rootNode.search(key);
     }
 

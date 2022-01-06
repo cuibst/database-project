@@ -30,6 +30,7 @@ public class InterNode extends TreeNode {
     }
 
     public JSONObject split() {
+        log.info("internode split!");
         int mid = (int) Math.floor((childKeys.size() + 1) / 2.0);
         List<IndexContent> newKeys = new ArrayList<>();
         newKeys.addAll(this.childKeys.subList(mid, childKeys.size()));
@@ -50,6 +51,13 @@ public class InterNode extends TreeNode {
 
     @Override
     public void insert(IndexContent key, RID rid) {
+//        int sum = 0;
+//        for (int i = 0; i < childNodes.size(); i++) {
+//            sum += childNodes.get(i).getChildKeys().size();
+//        }
+//        log.info(String.valueOf(sum));
+//        log.info("childKeys{}", childKeys);
+//        log.info(key.toString());
         int index = this.lowerBound(key);
         if (index == -1) {
             this.childKeys.add(key);
@@ -85,8 +93,6 @@ public class InterNode extends TreeNode {
                 childNodes.add(index + 1, node);
             }
         }
-        log.info("childNodes{}", childNodes.toString());
-        log.info("childKeys{}", childKeys.toString());
     }
 
     @Override
@@ -149,7 +155,6 @@ public class InterNode extends TreeNode {
 
     @Override
     public List<RID> search(IndexContent key) {
-        log.info("pageId {} ", this.pageId);
         int low = lowerBound(key);
         int high = upperBound(key);
         List<RID> list = new ArrayList<>();
@@ -157,7 +162,6 @@ public class InterNode extends TreeNode {
             low--;
         if (high == childNodes.size())
             high--;
-        log.info("low: {}, high: {}", low, high);
         if (high == -1)
             return null;
         for (int i = low; i <= high; i++) {
@@ -169,8 +173,6 @@ public class InterNode extends TreeNode {
     }
 
     public int getChildKeysSize() {
-//        System.out.println("in here");
-//        System.out.println(childKeys.size());
         return childKeys.size();
     }
 

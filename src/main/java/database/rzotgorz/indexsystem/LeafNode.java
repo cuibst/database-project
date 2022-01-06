@@ -42,6 +42,8 @@ public class LeafNode extends TreeNode {
         this.childRids = this.childRids.subList(0, mid);
         this.childKeys = this.childKeys.subList(0, mid);
         object.put("maxKey", newKeys.get(0));
+//        log.info(newRids.toString());
+//        log.info(this.childRids.toString());
         return object;
     }
 
@@ -81,17 +83,15 @@ public class LeafNode extends TreeNode {
     }
 
     public List<RID> search(IndexContent key) {
-        log.info(childRids.toString());
         int low = lowerBound(key);
         int high = upperBound(key);
-        log.info("low: {}, high: {}", low, high);
         if (low == -1)
             return null;
         if (high == -1)
             return null;
-        if(low == childKeys.size())
+        if (low == childKeys.size())
             low -= 1;
-        if(high == childKeys.size())
+        if (high == childKeys.size())
             high -= 1;
         List<RID> list = new ArrayList<>();
         for (int i = low; i <= high; i++) {

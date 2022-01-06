@@ -1,6 +1,5 @@
 package database.rzotgorz;
 
-import database.rzotgorz.indexsystem.IndexContent;
 import database.rzotgorz.managesystem.DatabaseController;
 import database.rzotgorz.managesystem.SQLTreeVisitor;
 import database.rzotgorz.managesystem.results.MessageResult;
@@ -26,7 +25,6 @@ import org.jline.terminal.TerminalBuilder;
 import java.io.*;
 import java.nio.file.NotDirectoryException;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Scanner;
 
 @Slf4j
@@ -78,10 +76,10 @@ public class Main {
         else {
             Scanner scanner = new Scanner(in);
             StringBuilder builder = new StringBuilder();
-            while(scanner.hasNextLine()) {
+            while (scanner.hasNextLine()) {
                 String currentLine = scanner.nextLine();
-                builder.append(currentLine);
-                if(currentLine.stripTrailing().endsWith(";")) {
+                builder.append(currentLine).append(" ");
+                if (currentLine.stripTrailing().endsWith(";")) {
                     Object r = controller.execute(builder.toString());
                     printResults(r, out);
                     builder = new StringBuilder();
