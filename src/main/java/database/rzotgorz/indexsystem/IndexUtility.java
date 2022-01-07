@@ -141,7 +141,20 @@ public class IndexUtility {
                     resList.add(res);
                 }
                 head += 4;
-            } else if (list.get(i).contains("VARCHAR")) {
+            }else if (list.get(i).contains("DATE")) {
+                byte[] longBytes = new byte[8];
+                if (data[head] == (byte) 0) {
+                    resList.add(null);
+                    head++;
+                } else {
+                    head++;
+                    System.arraycopy(data, head, longBytes, 0, 8);
+                    long res = ByteLongConverter.bytes2Long(longBytes);
+                    resList.add(res);
+                }
+                head += 8;
+            }
+            else if (list.get(i).contains("VARCHAR")) {
                 int len = getStringSize(list.get(i));
                 byte[] strBytes = new byte[len];
                 if (data[head] == (byte) 0) {

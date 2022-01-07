@@ -181,7 +181,7 @@ public class Parser {
                     process[i] = data[i + 1];
                 }
                 SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
-                return (data[0] == (byte) 0) ? null : formatter.format(((ByteLongConverter.bytes2Long(process))));
+                return (data[0] == (byte) 0) ? null : ByteLongConverter.bytes2Long(process);
             }
             default: {
                 throw new RuntimeException(String.format("Invalid Type : %s", type));

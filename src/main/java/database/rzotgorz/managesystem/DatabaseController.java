@@ -343,17 +343,18 @@ public class DatabaseController {
         removeIndex(tableName + "." + key);
     }
 
-    public void removeForeignKeyConstraint(String tableName, List<String> columns) {
+    public void removeForeignKeyConstraint(String tableName, String targetTableName, List<String> columns) {
         if (currentUsingDatabase == null)
             throw new RuntimeException("No database is being used!");
         MetaHandler metaHandler = metaManager.openMeta(currentUsingDatabase);
-        SQLTreeVisitor.ForeignKey key = metaHandler.getTable(tableName).getForeign().get(tableName + "." + columns);
+        log.info("{}", metaHandler.getTable(tableName).getForeign());
+        SQLTreeVisitor.ForeignKey key = metaHandler.getTable(tableName).getForeign().get(targetTableName + "." + columns);
         removeIndex(tableName + "." + key.columns);
         removeIndex(key.targetTable + "." + key.targetColumns);
-        metaHandler.removeForeign(tableName, tableName + "." + columns);
+        metaHandler.removeForeign(tableName, targetTableName + "." + columns);
     }
 
-    public void createIndex(String indexName, String tableName, List<String> columnName) throws Exception {
+    public void createIndex(String indexName, String tableName, List<String> columnName) throws UnsupportedEncodingException {
         InfoAndHandler pack = getTableInfo(tableName);
         if (pack.handler.existsIndex(indexName))
             throw new RuntimeException(String.format("Indices %s already exists!", indexName));
@@ -384,13 +385,6 @@ public class DatabaseController {
             List<Object> data = pack.info.loadRecord(record);
             List<Comparable> content = new ArrayList<>();
             columnId.forEach(id -> content.add((Comparable) data.get(id)));
-            for (int i = 0; i < pack.info.getTypeList().size(); i++) {
-                if (pack.info.getTypeList().get(i).contains("DATE")) {
-                    SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
-                    ParsePosition pos = new ParsePosition(0);
-                    content.set(i, (content.get(i) == null) ? null : (Long) formatter.parse(content.get(i).toString(), pos).getTime());
-                }
-            }
             log.info(content.toString());
             index.insert(new IndexContent(content), record.getRid());
         }
@@ -436,6 +430,9 @@ public class DatabaseController {
                                 throw new RuntimeException(String.format("Type %s expected but get %s instead.", type, value.getClass()));
                             break;
                         case "DATE":
+                            if (value.getClass() != Long.class)
+                                throw new RuntimeException(String.format("Type %s expected but get %s instead.", type, value.getClass()));
+                            break;
                         case "VARCHAR":
                             if (value.getClass() != String.class)
                                 throw new RuntimeException(String.format("Type %s expected but get %s instead.", type, value.getClass()));
@@ -818,7 +815,17 @@ public class DatabaseController {
         List<List<Object>> valuesList = new ArrayList<>();
         recordDataPack.data.forEach(objects -> {
             List<Object> result = new ArrayList<>();
-            objects.forEach(object -> result.add(objects == null ? "NULL" : object));
+            for (int i = 0; i < objects.size(); i++) {
+                Object object = objects.get(i);
+                if(object == null)
+                    object = "NULL";
+                else if(pack.info.getTypeList().get(i).equals("DATE")) {
+                    SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+                    ParsePosition pos = new ParsePosition(0);
+                    object = formatter.format(new Date((Long)object));
+                }
+                result.add(object);
+            }
             valuesList.add(result);
         });
         return new TableResult(pack.info.getHeader(), valuesList);
@@ -834,14 +841,6 @@ public class DatabaseController {
             else
                 stringList.add(null);
         });
-        for (int i = 0; i < pack.info.getTypeList().size(); i++) {
-            if (pack.info.getTypeList().get(i).contains("DATE")) {
-                SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
-                ParsePosition pos = new ParsePosition(0);
-                stringList.set(i, (stringList.get(i) == null) ? null : String.valueOf(formatter.parse(stringList.get(i), pos).getTime()));
-                valueList.set(i, (stringList.get(i) == null) ? null : Long.parseLong(stringList.get(i)));
-            }
-        }
         byte[] data = pack.info.buildRecord(stringList);
         FileHandler fileHandler = recordManager.openFile(getTablePath(tableName));
         Record rid = fileHandler.insertRecord(data);
@@ -886,9 +885,7 @@ public class DatabaseController {
                         if (entry.getValue().getName().equals(clause.getColumnName())) {
                             switch (entry.getValue().getType()) {
                                 case "DATE":
-                                    SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
-                                    ParsePosition pos = new ParsePosition(0);
-                                    values.set(cnt, String.valueOf(formatter.parse(clause.getValue().toString(), pos).getTime()));
+                                    values.set(cnt, clause.getValue());
                                     break;
                                 case "INT":
                                     values.set(cnt, clause.getValue());
@@ -923,13 +920,6 @@ public class DatabaseController {
                                 values.set(i, clause.getValue());
                             }
                         }
-//                        for (int i = 0; i < pack.info.getTypeList().size(); i++) {
-//                            if (pack.info.getTypeList().get(i).contains("DATE")) {
-//                                SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
-//                                ParsePosition pos = new ParsePosition(0);
-//                                values.set(i, String.valueOf(formatter.parse(values.get(i).toString(), pos).getTime()));
-//                            }
-//                        }
                         int cnt = 0;
                         for (Map.Entry<String, ColumnInfo> entry : pack.info.getColumns().entrySet()) {
                             if (entry.getValue().getName().equals(clause.getColumnName())) {
@@ -944,9 +934,7 @@ public class DatabaseController {
                                         values1.set(cnt, clause.getValue());
                                         break;
                                     case "DATE":
-                                        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
-                                        ParsePosition pos = new ParsePosition(0);
-                                        values1.set(cnt, String.valueOf(formatter.parse(clause.getValue().toString(), pos).getTime()));
+                                        values1.set(cnt, clause.getValue());
                                         break;
                                 }
                             }

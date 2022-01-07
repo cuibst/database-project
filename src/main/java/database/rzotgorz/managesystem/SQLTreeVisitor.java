@@ -12,7 +12,10 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 
 import java.io.FileNotFoundException;
 import java.io.Serializable;
+import java.io.UnsupportedEncodingException;
 import java.nio.file.FileAlreadyExistsException;
+import java.text.ParsePosition;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -334,9 +337,9 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
         else if (ctx.String() != null)
             return ctx.getText().substring(1, ctx.getText().length() - 1);
         else if (ctx.Date() != null) {
-//            SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
-//            ParsePosition pos = new ParsePosition(0);
-            return ctx.getText();
+            SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+            ParsePosition pos = new ParsePosition(0);
+            return formatter.parse(ctx.getText(), pos).getTime();
         } else
             return null;
     }
@@ -347,8 +350,8 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
         List<String> columns = ((PrimaryKey) ctx.identifiers().accept(this)).fields;
         try {
             controller.createIndex(tableName + "." + columns, tableName, columns);
-        } catch (Exception e) {
-            throw new RuntimeException(e.getMessage());
+        } catch (UnsupportedEncodingException e) {
+            return new MessageResult(e.getMessage(), true);
         }
         return new OperationResult("added", columns.size());
     }
@@ -370,9 +373,10 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
 
     @Override
     public Object visitAlter_table_drop_foreign_key(SQLParser.Alter_table_drop_foreign_keyContext ctx) {
-        String tableName = ctx.Identifier().getText();
+        String tableName = ctx.Identifier(0).getText();
+        String targetTableName = ctx.Identifier(1).getText();
         List<String> columns = ((PrimaryKey)ctx.identifiers().accept(this)).fields;
-        controller.removeForeignKeyConstraint(tableName, columns);
+        controller.removeForeignKeyConstraint(tableName, targetTableName, columns);
         return new MessageResult(String.format("Foreign key %s in table %s removed.", columns.toString(), tableName));
     }
 
