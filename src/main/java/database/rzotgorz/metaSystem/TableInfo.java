@@ -146,6 +146,8 @@ public class TableInfo implements Serializable {
     }
 
     public Integer getIndex(String name) {
+        if (!colIndex.containsKey(name))
+            throw new RuntimeException(String.format("Cannot find the column :%s", name));
         return this.colIndex.get(name);
     }
 
