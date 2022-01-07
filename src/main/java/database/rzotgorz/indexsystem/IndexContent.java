@@ -43,8 +43,6 @@ public class IndexContent implements Comparable {
                     return val1 < val2 ? 1 : -1;
                 continue;
             }
-            log.info(list.toString());
-            log.info(indexList.toString());
             int ans = indexList.get(i).compareTo(list.get(i));
             if (ans != 0)
                 return ans;

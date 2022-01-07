@@ -421,9 +421,6 @@ public class DatabaseController {
                                 throw new RuntimeException(String.format("Type %s expected but get %s instead.", type, value.getClass()));
                             break;
                         case "DATE":
-                            if (value.getClass() != String.class)
-                                throw new RuntimeException(String.format("Type %s expected but get %s instead.", type, value.getClass()));
-                            break;
                         case "VARCHAR":
                             if (value.getClass() != String.class)
                                 throw new RuntimeException(String.format("Type %s expected but get %s instead.", type, value.getClass()));
@@ -447,9 +444,13 @@ public class DatabaseController {
         public Object lower;
         public Object upper;
 
+        public boolean leftClose;
+        public boolean rightClose;
+
         public Interval(Object lower, Object upper) {
             this.lower = lower;
             this.upper = upper;
+            leftClose = rightClose = true;
         }
     }
 
@@ -501,25 +502,43 @@ public class DatabaseController {
                         interval = new Interval(Float.MIN_VALUE, Float.MAX_VALUE);
                     float value;
                     if (((ValueOperatorClause) clause).getValue().getClass() == Integer.class)
-                        value = (Integer) ((ValueOperatorClause) clause).getValue();
+                        value = ((Integer) ((ValueOperatorClause) clause).getValue()).floatValue();
                     else
-                        value = ((Float) ((ValueOperatorClause) clause).getValue()).intValue();
+                        value = ((Float) ((ValueOperatorClause) clause).getValue());
                     switch (operator) {
                         case "=":
-                            interval.lower = Math.max((Float) interval.lower, value);
-                            interval.upper = Math.min((Float) interval.upper, value);
+                            if(value > (Float)interval.lower) {
+                                interval.lower = value;
+                                interval.leftClose = true;
+                            }
+                            if(value < (Float)interval.upper) {
+                                interval.upper = value;
+                                interval.rightClose = true;
+                            }
                             break;
                         case "<":
-                            interval.upper = Math.min((Float) interval.upper, value - 1);
+                            if(value <= (Float)interval.upper) {
+                                interval.upper = value;
+                                interval.rightClose = false;
+                            }
                             break;
                         case ">":
-                            interval.lower = Math.max((Float) interval.lower, value + 1);
+                            if(value >= (Float)interval.lower) {
+                                interval.lower = value;
+                                interval.leftClose = false;
+                            }
                             break;
                         case "<=":
-                            interval.upper = Math.min((Float) interval.upper, value);
+                            if(value < (Float)interval.upper) {
+                                interval.upper = value;
+                                interval.rightClose = true;
+                            }
                             break;
                         case ">=":
-                            interval.lower = Math.max((Float) interval.lower, value);
+                            if(value > (Float)interval.lower) {
+                                interval.lower = value;
+                                interval.leftClose = true;
+                            }
                             break;
                         default:
                             return;
@@ -562,13 +581,14 @@ public class DatabaseController {
             FileIndex index = indexManager.openedIndex(currentUsingDatabase, tableName, pack.info.getRootId(new ArrayList<>(List.of(entry.getKey()))), new ArrayList<>(List.of(entry.getKey())).toString());
             IndexContent lower = new IndexContent(new ArrayList<>(List.of((Comparable) entry.getValue().lower)));
             IndexContent upper = new IndexContent(new ArrayList<>(List.of((Comparable) entry.getValue().upper)));
+            log.info("{} {} {} {}", lower, upper, entry.getValue().leftClose, entry.getValue().rightClose);
             if (result == null) {
-                ArrayList<RID> res = index.range(lower, upper);
+                ArrayList<RID> res = index.range(lower, upper, entry.getValue().leftClose, entry.getValue().rightClose);
                 if (res == null)
                     return null;
                 (result = new TreeSet<>(Comparator.naturalOrder())).addAll(res);
             } else
-                result.retainAll(index.range(lower, upper));
+                result.retainAll(index.range(lower, upper, entry.getValue().leftClose, entry.getValue().rightClose));
         }
         log.info("Filter size: {}", result == null ? 0 : result.size());
         return result;
@@ -703,7 +723,7 @@ public class DatabaseController {
 //                log.info(targetPack.info.getPrimary().toString());
                 FileIndex index = indexManager.openedIndex(currentUsingDatabase, foreignKey.targetTable, rootId, foreignKey.targetColumns.toString());
 //                log.info("targetTable:{},rootId:{},targetColumns:{}", foreignKey.targetTable, rootId, foreignKey.targetColumns.toString());
-                List<RID> rids = index.range(new IndexContent(indexValue), new IndexContent(indexValue));
+                List<RID> rids = index.search(new IndexContent(indexValue));
                 if (rids == null || rids.isEmpty()) {
                     return true;
                 }
