@@ -129,7 +129,7 @@ public class LeafNode extends TreeNode {
         return bytes;
     }
 
-    public ArrayList<RID> range(IndexContent low, IndexContent high) {
+    public ArrayList<RID> range(IndexContent low, IndexContent high, boolean left, boolean right) {
         ArrayList<RID> res = new ArrayList<>();
         int lower = lowerBound(low);
         int upper = upperBound(high);
@@ -140,8 +140,18 @@ public class LeafNode extends TreeNode {
         if (lower != 0)
             lower--;
         for (int i = lower; i < upper; i++) {
-            if (childKeys.get(i).compareTo(low) >= 0 && childKeys.get(i).compareTo(high) <= 0)
-                res.add(childRids.get(i));
+            if (left && right)
+                if (childKeys.get(i).compareTo(low) >= 0 && childKeys.get(i).compareTo(high) <= 0)
+                    res.add(childRids.get(i));
+            if (left && !right)
+                if (childKeys.get(i).compareTo(low) >= 0 && childKeys.get(i).compareTo(high) < 0)
+                    res.add(childRids.get(i));
+            if (!left && right)
+                if (childKeys.get(i).compareTo(low) > 0 && childKeys.get(i).compareTo(high) <= 0)
+                    res.add(childRids.get(i));
+            if (!left && !right)
+                if (childKeys.get(i).compareTo(low) > 0 && childKeys.get(i).compareTo(high) < 0)
+                    res.add(childRids.get(i));
         }
         return res;
     }

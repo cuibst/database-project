@@ -234,9 +234,9 @@ public class FileIndex {
         return this.rootNode.search(key);
     }
 
-    public ArrayList<RID> range(IndexContent low, IndexContent high) {
+    public ArrayList<RID> range(IndexContent low, IndexContent high, boolean left, boolean right) {
 //        log.info(low.toString());
 //        log.info(high.toString());
-        return this.rootNode.range(low, high);
+        return this.rootNode.range(low, high, left, right);
     }
 }

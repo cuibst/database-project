@@ -118,7 +118,7 @@ public class TreeNode {
         return null;
     }
 
-    public ArrayList<RID> range(IndexContent low, IndexContent high) {
+    public ArrayList<RID> range(IndexContent low, IndexContent high, boolean left, boolean right) {
         return null;
     }
 }

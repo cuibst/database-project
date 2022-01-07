@@ -170,7 +170,7 @@ public class InterNode extends TreeNode {
     }
 
     @Override
-    public ArrayList<RID> range(IndexContent low, IndexContent high) {
+    public ArrayList<RID> range(IndexContent low, IndexContent high, boolean left, boolean right) {
         ArrayList<RID> res = new ArrayList<>();
         int lower = lowerBound(low);
         int upper = upperBound(high);
@@ -183,7 +183,7 @@ public class InterNode extends TreeNode {
 //        log.info(String.valueOf(this.childKeys.toString()));
         for (int i = lower; i < upper; i++) {
 //            log.info(this.childKeys.get(i).toString());
-            ArrayList<RID> subRes = childNodes.get(i).range(low, high);
+            ArrayList<RID> subRes = childNodes.get(i).range(low, high, left, right);
             if (subRes != null)
                 res.addAll(subRes);
         }
