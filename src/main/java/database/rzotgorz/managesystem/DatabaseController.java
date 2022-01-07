@@ -138,16 +138,14 @@ public class DatabaseController {
     public ResultItem showIndices() {
         if (currentUsingDatabase == null)
             return new MessageResult("No database is selected.", true);
-        File databaseDirectory = new File(getDatabasePath(currentUsingDatabase));
-        assert databaseDirectory.exists() && databaseDirectory.isDirectory();
-        Set<String> indices = new HashSet<>();
-        File[] files = databaseDirectory.listFiles();
-        if (files != null && files.length > 0 && files[0] != null)
-            for (File file : files) {
-                if (file.getName().endsWith(INDEX_SUFFIX))
-                    indices.add(file.getName().substring(0, file.getName().length() - INDEX_SUFFIX.length()));
-            }
-        return new ListResult(indices, "INDICES");
+        MetaHandler handler = metaManager.openMeta(currentUsingDatabase);
+        DbInfo info = handler.getDbInfo();
+        List<String> header = new ArrayList<>(List.of("NAME", "TABLE", "COLUMNS"));
+        List<List<Object>> data = new ArrayList<>();
+        info.getIndex().forEach((name, indexInfo) -> {
+            data.add(new ArrayList<>(List.of(name, indexInfo.tableName, indexInfo.columnName.toString())));
+        });
+        return new TableResult(header, data);
     }
 
     public ResultItem createTable(TableInfo bundle) {
