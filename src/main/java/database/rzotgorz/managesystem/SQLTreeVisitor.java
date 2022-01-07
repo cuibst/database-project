@@ -57,7 +57,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
                     results.add(result);
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+//                e.printStackTrace();
                 ResultItem errorResult = new MessageResult(e.getMessage(), true);
                 errorResult.cost = getTimeDelta();
                 results.add(errorResult);
@@ -231,6 +231,8 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
         if (ctx.Null() != null) {
             info.setNotNull(true);
         }
+        if(ctx.value()!=null)
+            info.setDefaultValue(ctx.value().accept(this));
         return info;
     }
 
@@ -401,7 +403,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
         List<String> targetColumns = ((PrimaryKey) ctx.identifiers(1).accept(this)).fields;
         try {
             controller.addForeignKeyConstraint(tableName, new ForeignKey(keyName, targetTable, columns, targetColumns));
-        } catch (Exception e) {
+        } catch (UnsupportedEncodingException e) {
             return new MessageResult(e.getMessage(), true);
         }
         return new MessageResult(String.format("Foreign key %s for table %s added.", keyName, tableName));

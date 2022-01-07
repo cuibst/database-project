@@ -220,7 +220,7 @@ public class DatabaseController {
             removeIndex(tableName + "." + columns);
     }
 
-    public void addForeignKeyConstraint(String tableName, SQLTreeVisitor.ForeignKey foreignKey) throws Exception {
+    public void addForeignKeyConstraint(String tableName, SQLTreeVisitor.ForeignKey foreignKey) throws UnsupportedEncodingException {
         if (currentUsingDatabase == null)
             throw new RuntimeException("No database is being used!");
         InfoAndHandler pack = getTableInfo(tableName);
@@ -347,7 +347,6 @@ public class DatabaseController {
         if (currentUsingDatabase == null)
             throw new RuntimeException("No database is being used!");
         MetaHandler metaHandler = metaManager.openMeta(currentUsingDatabase);
-        log.info("{}", metaHandler.getTable(tableName).getForeign());
         SQLTreeVisitor.ForeignKey key = metaHandler.getTable(tableName).getForeign().get(targetTableName + "." + columns);
         removeIndex(tableName + "." + key.columns);
         removeIndex(key.targetTable + "." + key.targetColumns);
@@ -385,7 +384,6 @@ public class DatabaseController {
             List<Object> data = pack.info.loadRecord(record);
             List<Comparable> content = new ArrayList<>();
             columnId.forEach(id -> content.add((Comparable) data.get(id)));
-            log.info(content.toString());
             index.insert(new IndexContent(content), record.getRid());
         }
         pack.handler.createIndex(indexName, tableName, columnName);
@@ -653,11 +651,12 @@ public class DatabaseController {
             int rootId = infoPack.info.getRootId(columns);
             FileIndex index = indexManager.openedIndex(currentUsingDatabase, tableName, rootId, columns.toString());
             List<Comparable> value = new ArrayList<>();
-//            DbInfo.IndexInfo info = infoPack.handler.getDbInfo().getIndexInfo(tableName + "." + columns);
-//            info.columnName.forEach(column -> value.add((Comparable) values.get(infoPack.info.getIndex(column))));
-            for (int i = 0; i < values.size(); i++) {
-                value.add((Comparable) values.get(i));
-            }
+            DbInfo.IndexInfo info = infoPack.handler.getDbInfo().getIndexInfo(tableName + "." + columns);
+            info.columnName.forEach(column -> value.add((Comparable) values.get(infoPack.info.getIndex(column))));
+//            for (int i = 0; i < values.size(); i++) {
+//                value.add((Comparable) values.get(i));
+//            }
+//            log.info("{}", value);
             List<RID> rids = index.search(new IndexContent(value));
             if (rids == null || rids.isEmpty())
                 return false;
@@ -687,13 +686,11 @@ public class DatabaseController {
         InfoAndHandler pack = getTableInfo(tableName);
         if (pack.info.getPrimary().size() == 0)
             return false;
-        List<Object> checkValues = new ArrayList<>();
         pack.info.getPrimary().forEach(primary -> {
-            checkValues.add(values.get(pack.info.getIndex(primary)));
             if (values.get(pack.info.getIndex(primary)) == null)
                 throw new RuntimeException("Primary key found NULL value.");
         });
-        return checkAnyUnique(tableName, pack.info.getPrimary(), checkValues, currentRow);
+        return checkAnyUnique(tableName, pack.info.getPrimary(), values, currentRow);
     }
 
     public boolean checkUniqueConstraint(String tableName, List<Object> values, RID currentRow) throws UnsupportedEncodingException {
@@ -701,9 +698,7 @@ public class DatabaseController {
         if (pack.info.getUnique().size() == 0)
             return false;
         for (List<String> unique : pack.info.getUnique().values()) {
-            List<Object> value = new ArrayList<>();
-            unique.forEach(column -> value.add(values.get(pack.info.getIndex(column))));
-            if (checkAnyUnique(tableName, unique, value, currentRow))
+            if (checkAnyUnique(tableName, unique, values, currentRow))
                 return true;
         }
         return false;

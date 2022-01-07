@@ -45,8 +45,8 @@ public class ColumnInfo implements Serializable {
             object[1] = this.type;
         else
             object[1] = String.format("%s(%d)", this.type, this.size);
-        object[2] = "NO";
-        object[3] = this.defaultValue == null ? "null" : this.defaultValue.toString();
+        object[2] = notNull ? "REFUSE" : "ALLOW";
+        object[3] = this.defaultValue == null ? "NULL" : this.defaultValue.toString();
         return object;
     }
 
