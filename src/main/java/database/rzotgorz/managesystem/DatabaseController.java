@@ -1101,8 +1101,11 @@ public class DatabaseController {
             }
         });
 
-        if (group != null && group.tableName == null)
-            group.tableName = tableNames.get(0);
+        if (group != null && group.tableName == null) {
+            if(columnToTable.get(group.columnName).size() != 1)
+                throw new RuntimeException(String.format("Group by column %s is ambiguous.", group.columnName));
+            group.tableName = columnToTable.get(group.columnName).get(0);
+        }
 
         String groupBy = group == null ? null : group.tableName + "." + group.columnName;
 
