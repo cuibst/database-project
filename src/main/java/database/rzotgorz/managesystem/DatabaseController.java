@@ -454,8 +454,6 @@ public class DatabaseController {
             if (result == null) {
                 ArrayList<RID> res = index.range(lower, upper);
                 if (res == null)
-                    log.info("yes");
-                if (res == null)
                     return null;
                 (result = new TreeSet<>(Comparator.naturalOrder())).addAll(res);
             } else
@@ -581,8 +579,8 @@ public class DatabaseController {
                 String column = columns.get(i);
                 String targetColumn = entry.getValue().targetColumns.get(i);
                 Object value = values.get(pack.info.getIndex(column));
-                log.info("column:{}", column);
-                log.info("targetColumn:{}", targetColumn);
+//                log.info("column:{}", column);
+//                log.info("targetColumn:{}", targetColumn);
                 indexValue.add((Comparable) value);
                 if (value == null)
                     throw new RuntimeException("Foreign key can't have null value.");
@@ -591,7 +589,7 @@ public class DatabaseController {
             InfoAndHandler targetPack = getTableInfo(foreignKey.targetTable);
             if (targetPack.info.getRootId(foreignKey.targetColumns) != null) {
                 int rootId = targetPack.info.getRootId(foreignKey.targetColumns);
-                log.info(targetPack.info.getPrimary().toString());
+//                log.info(targetPack.info.getPrimary().toString());
                 FileIndex index = indexManager.openedIndex(currentUsingDatabase, foreignKey.targetTable, rootId, foreignKey.targetColumns.toString());
 //                log.info("targetTable:{},rootId:{},targetColumns:{}", foreignKey.targetTable, rootId, foreignKey.targetColumns.toString());
                 List<RID> rids = index.range(new IndexContent(indexValue), new IndexContent(indexValue));

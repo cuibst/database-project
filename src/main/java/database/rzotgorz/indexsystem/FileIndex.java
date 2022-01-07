@@ -137,7 +137,8 @@ public class FileIndex {
         if (this.rootNode.pageSize() > PAGE_SIZE) {
             int newPageId = indexHandler.createNewPage();
             InterNode root = new InterNode(newPageId, -1, new ArrayList<>(), new ArrayList<>(), indexHandler, this.typeSize, this.indexType);
-            this.rootNode.parentId = newPageId;
+            this.rootNode.parentId = this.rootId;
+            this.rootNode.setPageId(newPageId);
             int newPageStoreId = indexHandler.createNewPage();
             JSONObject object = this.rootNode.split();
             IndexContent minKey = rootNode.childKeys.get(0);
@@ -149,8 +150,10 @@ public class FileIndex {
             root.childKeys.add(maxKey);
             root.addChildNodes(this.rootNode);
             root.addChildNodes(node);
+            root.setPageId(this.rootId);
             this.rootNode = root;
-            this.rootId = newPageId;
+
+//            log.info("new pageId:{}", newPageId);
         }
     }
 
@@ -183,6 +186,7 @@ public class FileIndex {
             throw new RuntimeException("IndexType not exists!! This table cannot be used");
         }
 //        this.rootNode = new InterNode(rootId, -1, new ArrayList<>(), new ArrayList<>(), indexHandler, this.typeSize, this.indexType);
+//        log.info("rootId:{}", rootId);
         this.rootNode = this.buildNode(rootId);
     }
 
@@ -233,6 +237,8 @@ public class FileIndex {
     }
 
     public ArrayList<RID> range(IndexContent low, IndexContent high) {
+//        log.info(low.toString());
+//        log.info(high.toString());
         return this.rootNode.range(low, high);
     }
 }

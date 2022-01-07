@@ -6,6 +6,5 @@ java -jar .\target\dbms-homework-1.0-SNAPSHOT.jar ./testcases/supplier.sql test.
 java -jar .\target\dbms-homework-1.0-SNAPSHOT.jar ./testcases/partsupp.sql test.out
 java -jar .\target\dbms-homework-1.0-SNAPSHOT.jar ./testcases/customer.sql test.out
 java -jar .\target\dbms-homework-1.0-SNAPSHOT.jar ./testcases/orders.sql test.out
-
 java -jar .\target\dbms-homework-1.0-SNAPSHOT.jar ./testcases/lineitem.sql test.out
 
