@@ -13,6 +13,7 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 import java.io.FileNotFoundException;
 import java.io.Serializable;
 import java.nio.file.FileAlreadyExistsException;
+import java.sql.Date;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -333,7 +334,10 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
             return Float.parseFloat(ctx.getText());
         else if (ctx.String() != null)
             return ctx.getText().substring(1, ctx.getText().length() - 1);
-        else
+        else if (ctx.Date() != null) {
+            log.info(ctx.getText());
+            return Date.parse(ctx.getText());
+        } else
             return null;
     }
 

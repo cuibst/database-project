@@ -47,6 +47,7 @@ public class InterNode extends TreeNode {
     @Override
     public void insert(IndexContent key, RID rid) {
         int index = this.lowerBound(key);
+        int index1 = this.upperBound(key);
         if (index == -1) {
             this.childKeys.add(key);
             int nodePageId = indexHandler.createNewPage();
@@ -64,7 +65,7 @@ public class InterNode extends TreeNode {
                 List<IndexContent> newKeys;
                 newKeys = (ArrayList<IndexContent>) object.get("newKeys");
                 IndexContent maxKey = (IndexContent) object.get("maxKey");
-                childKeys.add(index + 1, maxKey);
+                childKeys.add(index1, maxKey);
                 int newPageId = indexHandler.createNewPage();
                 TreeNode node;
                 if (currentNode.nodeType == 0) {
@@ -78,7 +79,7 @@ public class InterNode extends TreeNode {
                     leafNode.setNextId(newPageId);
                     node = new LeafNode(newPageId, leafNode.parentId, leafNode.pageId, leafNode.getNextId(), newVal, newKeys, indexHandler, this.typeSize, this.indexType);
                 }
-                childNodes.add(index + 1, node);
+                childNodes.add(index1, node);
             }
         }
     }
@@ -186,6 +187,7 @@ public class InterNode extends TreeNode {
             if (subRes != null)
                 res.addAll(subRes);
         }
+//        log.info(" ");
         return res;
     }
 }

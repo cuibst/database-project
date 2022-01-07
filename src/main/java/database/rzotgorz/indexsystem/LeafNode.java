@@ -42,8 +42,6 @@ public class LeafNode extends TreeNode {
         this.childRids = this.childRids.subList(0, mid);
         this.childKeys = this.childKeys.subList(0, mid);
         object.put("maxKey", newKeys.get(0));
-//        log.info(newRids.toString());
-//        log.info(this.childRids.toString());
         return object;
     }
 

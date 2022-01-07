@@ -20,6 +20,7 @@ String:  '\'' (~'\'')* '\'';
 Float: ('-')? [0-9]+ '.' [0-9]*;
 Whitespace: [ \t\n\r]+ -> skip;
 Annotation: '-' '-' (~';')+;
+Date: [0-9][0-9][0-9][0-9]'-'[0-1][0-9]'-'[0-3][0-9];
 
 program
     : statement* EOF
@@ -88,6 +89,7 @@ type_
     : 'INT'
     | 'VARCHAR' '(' Integer ')'
     | 'FLOAT'
+    | 'DATE'
     ;
 
 value_lists
@@ -103,6 +105,7 @@ value
     | String
     | Float
     | Null
+    | Date
     ;
 
 where_and_clause

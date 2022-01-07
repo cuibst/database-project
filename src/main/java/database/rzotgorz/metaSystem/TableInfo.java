@@ -157,8 +157,8 @@ public class TableInfo implements Serializable {
             if (columnInfo == null) {
                 throw new RuntimeException(String.format("column named :%s is unknown", entry.getKey()));
             }
-            if (columnInfo.getType().equals("DATE"))
-                map.put(entry.getKey(), Parser.parserDate(entry.getValue()).toString());
+//            if (columnInfo.getType().equals("DATE"))
+//                map.put(entry.getKey(), Parser.parserDate(entry.getValue()).toString());
         }
     }
 

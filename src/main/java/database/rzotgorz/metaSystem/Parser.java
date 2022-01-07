@@ -10,19 +10,22 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
 
 @Data
 @Slf4j
 public class Parser {
-    public static Calendar parserDate(String s) {
-        Calendar calendar = Calendar.getInstance();
+    public static String parserDate(Long s) {
         try {
-            calendar.setTime(new Date(s));
+            Date date = new Date(s);
+            return date.toString();
         } catch (Exception e) {
             throw new TypeException(String.format("cannot converter %s to Date type", s));
         }
-        return calendar;
+
     }
 
     public static byte[] parserType(String value, String type) {

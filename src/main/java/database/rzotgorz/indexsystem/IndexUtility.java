@@ -53,7 +53,7 @@ public class IndexUtility {
                     data[head] = 1;
                     head++;
                     byte[] res;
-                    if(content.getIndexList().get(i) instanceof Integer)
+                    if (content.getIndexList().get(i) instanceof Integer)
                         res = ByteLongConverter.long2Bytes((int) content.getIndexList().get(i));
                     else
                         res = ByteLongConverter.long2Bytes((long) content.getIndexList().get(i));

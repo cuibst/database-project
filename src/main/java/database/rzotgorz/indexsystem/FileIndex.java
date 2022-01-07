@@ -136,7 +136,7 @@ public class FileIndex {
         this.rootNode.insert(key, rid);
         if (this.rootNode.pageSize() > PAGE_SIZE) {
             int newPageId = indexHandler.createNewPage();
-            InterNode root = new InterNode(newPageId, -1, new ArrayList<>(), new ArrayList<>(), indexHandler, this.typeSize, this.indexType);
+            InterNode root = new InterNode(this.rootId, -1, new ArrayList<>(), new ArrayList<>(), indexHandler, this.typeSize, this.indexType);
             this.rootNode.parentId = this.rootId;
             this.rootNode.setPageId(newPageId);
             int newPageStoreId = indexHandler.createNewPage();
@@ -152,8 +152,6 @@ public class FileIndex {
             root.addChildNodes(node);
             root.setPageId(this.rootId);
             this.rootNode = root;
-
-//            log.info("new pageId:{}", newPageId);
         }
     }
 

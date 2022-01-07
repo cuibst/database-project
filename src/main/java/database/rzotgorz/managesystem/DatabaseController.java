@@ -465,59 +465,59 @@ public class DatabaseController {
 
                 if (((ValueOperatorClause) clause).getValue().getClass() != Integer.class && ((ValueOperatorClause) clause).getValue().getClass() != Float.class)
                     return;
-                if(pack.info.getColumns().get(columnName).getType().equals("INT")) {
+                if (pack.info.getColumns().get(columnName).getType().equals("INT")) {
                     if (interval == null)
                         interval = new Interval(Integer.MIN_VALUE, Integer.MAX_VALUE);
                     int value;
-                    if(((ValueOperatorClause) clause).getValue().getClass() == Integer.class)
+                    if (((ValueOperatorClause) clause).getValue().getClass() == Integer.class)
                         value = (Integer) ((ValueOperatorClause) clause).getValue();
                     else
                         value = ((Float) ((ValueOperatorClause) clause).getValue()).intValue();
                     switch (operator) {
                         case "=":
-                            interval.lower = Math.max((Integer)interval.lower, value);
-                            interval.upper = Math.min((Integer)interval.upper, value);
+                            interval.lower = Math.max((Integer) interval.lower, value);
+                            interval.upper = Math.min((Integer) interval.upper, value);
                             break;
                         case "<":
-                            interval.upper = Math.min((Integer)interval.upper, value - 1);
+                            interval.upper = Math.min((Integer) interval.upper, value - 1);
                             break;
                         case ">":
-                            interval.lower = Math.max((Integer)interval.lower, value + 1);
+                            interval.lower = Math.max((Integer) interval.lower, value + 1);
                             break;
                         case "<=":
-                            interval.upper = Math.min((Integer)interval.upper, value);
+                            interval.upper = Math.min((Integer) interval.upper, value);
                             break;
                         case ">=":
-                            interval.lower = Math.max((Integer)interval.lower, value);
+                            interval.lower = Math.max((Integer) interval.lower, value);
                             break;
                         default:
                             return;
                     }
                     indexMap.put(columnName, interval);
-                } else if(pack.info.getColumns().get(columnName).getType().equals("FLOAT")) {
+                } else if (pack.info.getColumns().get(columnName).getType().equals("FLOAT")) {
                     if (interval == null)
                         interval = new Interval(Float.MIN_VALUE, Float.MAX_VALUE);
                     float value;
-                    if(((ValueOperatorClause) clause).getValue().getClass() == Integer.class)
+                    if (((ValueOperatorClause) clause).getValue().getClass() == Integer.class)
                         value = (Integer) ((ValueOperatorClause) clause).getValue();
                     else
                         value = ((Float) ((ValueOperatorClause) clause).getValue()).intValue();
                     switch (operator) {
                         case "=":
                             interval.lower = Math.max((Float) interval.lower, value);
-                            interval.upper = Math.min((Float)interval.upper, value);
+                            interval.upper = Math.min((Float) interval.upper, value);
                             break;
                         case "<":
-                            interval.upper = Math.min((Float)interval.upper, value - 1);
+                            interval.upper = Math.min((Float) interval.upper, value - 1);
                             break;
                         case ">":
-                            interval.lower = Math.max((Float)interval.lower, value + 1);
+                            interval.lower = Math.max((Float) interval.lower, value + 1);
                             break;
                         case "<=":
-                            interval.upper = Math.min((Float)interval.upper, value);
+                            interval.upper = Math.min((Float) interval.upper, value);
                             break;
                         case ">=":
-                            interval.lower = Math.max((Float)interval.lower, value);
+                            interval.lower = Math.max((Float) interval.lower, value);
                             break;
                         default:
                             return;
