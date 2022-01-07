@@ -249,9 +249,54 @@ public class DatabaseController {
                 data.add(columnInfo.getDefaultValue());
                 datas.add(data);
             }
-//            recordManager.closeFile(tableName);
             dropTable(tableName);
             pack.info.insertColumn(columnInfo);
+            createTable(pack.info);
+            datas.forEach(data -> {
+                try {
+                    insertRecord(tableName, data);
+                } catch (UnsupportedEncodingException e) {
+                    e.printStackTrace();
+                }
+            });
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void dropColumn(String tableName, String columnName) {
+        try {
+            InfoAndHandler pack = getTableInfo(tableName);
+            FileHandler fileHandler = recordManager.openFile(getTablePath(tableName));
+            FileScanner fileScanner = new FileScanner(fileHandler);
+            List<List<Object>> datas = new ArrayList<>();
+            for (Record record : fileScanner) {
+                List<Object> data = pack.info.loadRecord(record);
+                List<Object> oldData = new ArrayList<>();
+                oldData.addAll(data);
+                data.set(pack.info.getIndex(columnName), null);
+                if (checkReverseForeignKeyConstraint(tableName, oldData, data)) {
+                    throw new RuntimeException("Cannot drop this column due to reverse foreign key");
+                }
+                if (pack.info.getPrimary().contains(columnName)) {
+                    throw new RuntimeException("Cannot drop this column because this column is in primary key");
+                }
+                pack.info.getUnique().forEach((s, item) -> {
+                    if (item.contains(columnName)) {
+                        throw new RuntimeException("Cannot drop this column because this column is in unique constraint");
+                    }
+                });
+                pack.info.getForeign().forEach((s, foreignKey) -> {
+                    if (foreignKey.columns.contains(columnName)) {
+                        throw new RuntimeException("Cannot drop this column because this column is in foreign key");
+                    }
+                });
+                deleteIndices(tableName, currentUsingDatabase, data, record.getRid());
+                data.remove((int) pack.info.getIndex(columnName));
+                datas.add(data);
+            }
+            dropTable(tableName);
+            pack.info.removeColumn(columnName);
             createTable(pack.info);
             datas.forEach(data -> {
                 try {

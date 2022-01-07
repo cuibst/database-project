@@ -436,6 +436,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     public Object visitAlter_table_drop_column(SQLParser.Alter_table_drop_columnContext ctx) {
         String tableName = ctx.Identifier().get(0).getText();
         String columnName = ctx.Identifier().get(1).getText();
+        controller.dropColumn(tableName, columnName);
         return new MessageResult(String.format("Drop column : %s in table : %s ", columnName, tableName));
     }
 
