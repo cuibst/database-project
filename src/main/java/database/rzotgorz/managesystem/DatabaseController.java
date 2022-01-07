@@ -377,6 +377,14 @@ public class DatabaseController {
             List<Object> data = pack.info.loadRecord(record);
             List<Comparable> content = new ArrayList<>();
             columnId.forEach(id -> content.add((Comparable) data.get(id)));
+            for (int i = 0; i < pack.info.getTypeList().size(); i++) {
+                if (pack.info.getTypeList().get(i).contains("DATE")) {
+                    SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+                    ParsePosition pos = new ParsePosition(0);
+                    content.set(i, (content.get(i) == null) ? null : (Long) formatter.parse(content.get(i).toString(), pos).getTime());
+                }
+            }
+            log.info(content.toString());
             index.insert(new IndexContent(content), record.getRid());
         }
         pack.handler.createIndex(indexName, tableName, columnName);
@@ -507,35 +515,35 @@ public class DatabaseController {
                         value = ((Float) ((ValueOperatorClause) clause).getValue());
                     switch (operator) {
                         case "=":
-                            if(value > (Float)interval.lower) {
+                            if (value > (Float) interval.lower) {
                                 interval.lower = value;
                                 interval.leftClose = true;
                             }
-                            if(value < (Float)interval.upper) {
+                            if (value < (Float) interval.upper) {
                                 interval.upper = value;
                                 interval.rightClose = true;
                             }
                             break;
                         case "<":
-                            if(value <= (Float)interval.upper) {
+                            if (value <= (Float) interval.upper) {
                                 interval.upper = value;
                                 interval.rightClose = false;
                             }
                             break;
                         case ">":
-                            if(value >= (Float)interval.lower) {
+                            if (value >= (Float) interval.lower) {
                                 interval.lower = value;
                                 interval.leftClose = false;
                             }
                             break;
                         case "<=":
-                            if(value < (Float)interval.upper) {
+                            if (value < (Float) interval.upper) {
                                 interval.upper = value;
                                 interval.rightClose = true;
                             }
                             break;
                         case ">=":
-                            if(value > (Float)interval.lower) {
+                            if (value > (Float) interval.lower) {
                                 interval.lower = value;
                                 interval.leftClose = true;
                             }
@@ -824,6 +832,7 @@ public class DatabaseController {
                 SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
                 ParsePosition pos = new ParsePosition(0);
                 stringList.set(i, (stringList.get(i) == null) ? null : String.valueOf(formatter.parse(stringList.get(i), pos).getTime()));
+                valueList.set(i, (stringList.get(i) == null) ? null : Long.parseLong(stringList.get(i)));
             }
         }
         byte[] data = pack.info.buildRecord(stringList);

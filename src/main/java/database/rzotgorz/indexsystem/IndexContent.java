@@ -6,6 +6,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import java.text.ParsePosition;
+import java.text.SimpleDateFormat;
 import java.util.List;
 
 @Slf4j
@@ -19,6 +21,15 @@ public class IndexContent implements Comparable {
     @Override
     public int compareTo(Object o) {
         List<Comparable> list = ((IndexContent) o).indexList;
+        for (int i = 0; i < list.size(); i++) {
+            try {
+                SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+                ParsePosition pos = new ParsePosition(0);
+                list.set(i, (Long) (formatter.parse(list.get(i).toString(), pos).getTime()));
+            } catch (Exception e) {
+                continue;
+            }
+        }
         for (int i = 0; i < list.size(); i++) {
             if (list.get(i) == null && indexList.get(i) == null)
                 continue;
