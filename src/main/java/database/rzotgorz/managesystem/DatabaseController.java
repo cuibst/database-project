@@ -213,6 +213,13 @@ public class DatabaseController {
             createIndex(tableName + "." + columns, tableName, columns);
     }
 
+    public void dropUniqueConstraint(String tableName, String constraintName, List<String> columns) {
+        InfoAndHandler pack = getTableInfo(tableName);
+        pack.handler.addUnique(pack.info, constraintName, columns);
+        if (pack.info.existsIndex(tableName + "." + columns))
+            removeIndex(tableName + "." + columns);
+    }
+
     public void addForeignKeyConstraint(String tableName, SQLTreeVisitor.ForeignKey foreignKey) throws Exception {
         if (currentUsingDatabase == null)
             throw new RuntimeException("No database is being used!");
@@ -336,14 +343,14 @@ public class DatabaseController {
         removeIndex(tableName + "." + key);
     }
 
-    public void removeForeignKeyConstraint(String tableName, String constraintName) {
+    public void removeForeignKeyConstraint(String tableName, List<String> columns) {
         if (currentUsingDatabase == null)
             throw new RuntimeException("No database is being used!");
         MetaHandler metaHandler = metaManager.openMeta(currentUsingDatabase);
-        SQLTreeVisitor.ForeignKey key = metaHandler.getTable(tableName).getForeign().get(constraintName);
+        SQLTreeVisitor.ForeignKey key = metaHandler.getTable(tableName).getForeign().get(tableName + "." + columns);
         removeIndex(tableName + "." + key.columns);
         removeIndex(key.targetTable + "." + key.targetColumns);
-        metaHandler.removeForeign(tableName, constraintName);
+        metaHandler.removeForeign(tableName, tableName + "." + columns);
     }
 
     public void createIndex(String indexName, String tableName, List<String> columnName) throws Exception {

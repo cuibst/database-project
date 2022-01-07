@@ -370,10 +370,10 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
 
     @Override
     public Object visitAlter_table_drop_foreign_key(SQLParser.Alter_table_drop_foreign_keyContext ctx) {
-        String tableName = ctx.Identifier(0).getText();
-        String keyName = ctx.Identifier(1).getText();
-        controller.removeForeignKeyConstraint(tableName, keyName);
-        return new MessageResult(String.format("Foreign key %s in table %s removed.", keyName, tableName));
+        String tableName = ctx.Identifier().getText();
+        List<String> columns = ((PrimaryKey)ctx.identifiers().accept(this)).fields;
+        controller.removeForeignKeyConstraint(tableName, columns);
+        return new MessageResult(String.format("Foreign key %s in table %s removed.", columns.toString(), tableName));
     }
 
     @Override
@@ -412,7 +412,15 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
         } catch (Exception e) {
             return new MessageResult(e.getMessage(), true);
         }
-        return new MessageResult(String.format("Unique constraints %s added", tableName + "." + columns.toString() + ".unique"));
+        return new MessageResult(String.format("Unique constraints %s added", tableName + "." + columns + ".unique"));
+    }
+
+    @Override
+    public Object visitAlter_table_drop_unique(SQLParser.Alter_table_drop_uniqueContext ctx) {
+        String tableName = ctx.Identifier().getText();
+        List<String> columns = ((PrimaryKey) ctx.identifiers().accept(this)).fields;
+        controller.dropUniqueConstraint(tableName, tableName + "." + columns.toString() + ".unique", columns);
+        return new MessageResult(String.format("Unique constraints %s removed", tableName + "." + columns + ".unique"));
     }
 
     @Override

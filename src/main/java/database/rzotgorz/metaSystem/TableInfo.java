@@ -133,6 +133,10 @@ public class TableInfo implements Serializable {
         this.unique.put(col, unique);
     }
 
+    public void dropUnique(String col, List<String> unique) {
+        this.unique.remove(col, unique);
+    }
+
     public byte[] buildRecord(List<String> list) {
         return Parser.encode(this.sizeList, this.typeList, this.totalSize, list);
     }

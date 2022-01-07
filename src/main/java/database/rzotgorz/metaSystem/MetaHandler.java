@@ -134,6 +134,11 @@ public class MetaHandler {
         this.dump();
     }
 
+    public void dropUnique(TableInfo tableInfo, String constraintName, List<String> unique) {
+        tableInfo.dropUnique(constraintName, unique);
+        this.dump();
+    }
+
     public void renameTable(String oldName, String newName) {
         if (!this.dbInfo.getTbMap().containsKey(oldName))
             throw new RuntimeException(String.format("Can not find table named:%s", oldName));
