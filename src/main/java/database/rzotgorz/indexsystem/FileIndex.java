@@ -131,10 +131,17 @@ public class FileIndex {
         return node;
     }
 
+    private static int cnt = 0;
+
     public void insert(IndexContent key, RID rid) {
+//        if(key.indexList.size() == 1 && key.indexList.get(0).equals(3)) {
+//            cnt++;
+//            log.info("{}", cnt);
+//        }
         this.modified = true;
         this.rootNode.insert(key, rid);
         if (this.rootNode.pageSize() > PAGE_SIZE) {
+//            log.info("root split");
             int newPageId = indexHandler.createNewPage();
             InterNode root = new InterNode(this.rootId, -1, new ArrayList<>(), new ArrayList<>(), indexHandler, this.typeSize, this.indexType);
             this.rootNode.parentId = this.rootId;

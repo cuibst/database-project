@@ -380,11 +380,17 @@ public class DatabaseController {
         pack.info.createIndex(columnName, index.getRootId());
         FileHandler fileHandler = recordManager.openFile(getTablePath(tableName));
         FileScanner fileScanner = new FileScanner(fileHandler);
+        int cnt = 0;
         for (Record record : fileScanner) {
             List<Object> data = pack.info.loadRecord(record);
             List<Comparable> content = new ArrayList<>();
             columnId.forEach(id -> content.add((Comparable) data.get(id)));
+//            log.info("insert {}", content.get(0));
+            if(content.get(0).equals(3))
+                cnt++;
             index.insert(new IndexContent(content), record.getRid());
+            int res = index.search(new IndexContent(new ArrayList<>(List.of(3)))).size();
+//            log.info("true: {} index: {}", cnt, res);
         }
         pack.handler.createIndex(indexName, tableName, columnName);
     }
@@ -591,7 +597,7 @@ public class DatabaseController {
             FileIndex index = indexManager.openedIndex(currentUsingDatabase, tableName, pack.info.getRootId(new ArrayList<>(List.of(entry.getKey()))), new ArrayList<>(List.of(entry.getKey())).toString());
             IndexContent lower = new IndexContent(new ArrayList<>(List.of((Comparable) entry.getValue().lower)));
             IndexContent upper = new IndexContent(new ArrayList<>(List.of((Comparable) entry.getValue().upper)));
-            log.info("{} {} {} {}", lower, upper, entry.getValue().leftClose, entry.getValue().rightClose);
+//            log.info("{} {} {} {}", lower, upper, entry.getValue().leftClose, entry.getValue().rightClose);
             if (result == null) {
                 ArrayList<RID> res = index.range(lower, upper, entry.getValue().leftClose, entry.getValue().rightClose);
                 if (res == null)
@@ -600,7 +606,7 @@ public class DatabaseController {
             } else
                 result.retainAll(index.range(lower, upper, entry.getValue().leftClose, entry.getValue().rightClose));
         }
-        log.info("Filter size: {}", result == null ? 0 : result.size());
+//        log.info("Filter size: {}", result == null ? 0 : result.size());
         return result;
     }
 
@@ -641,7 +647,7 @@ public class DatabaseController {
                 recordDataPack.data.add(values);
             }
         }
-        log.info("{} records received", cnt);
+//        log.info("{} records received", cnt);
         return recordDataPack;
     }
 
@@ -1051,13 +1057,27 @@ public class DatabaseController {
         UnionFindSet<String> unionFindSet = new UnionFindSet<>(resultMap.keySet());
 
         Map<String, TableResult> mergedMap = new HashMap<>(Map.copyOf(resultMap));
+        Map<String, Boolean> marker = new HashMap<>();
+        resultMap.keySet().forEach(key -> marker.put(key, false));
 
-        edgeMap.forEach((tablePair, constraints) -> {
+        List<Pair<String, String>> tablePairs = new ArrayList<>(List.copyOf(edgeMap.keySet()));
+        tablePairs.sort((o1, o2) -> {
+            int size1 = Math.max(resultMap.get(o1.first).getSize(), resultMap.get(o1.second).getSize());
+            int size2 = Math.max(resultMap.get(o2.first).getSize(), resultMap.get(o2.second).getSize());
+            if(size1 != size2)
+                return size1 < size2 ? -1 : 1;
+            return 0;
+        });
+
+        tablePairs.forEach(tablePair -> {
+            List<Pair<String, String>> constraints = edgeMap.get(tablePair);
             String outer = unionFindSet.getRoot(tablePair.first);
             String inner = unionFindSet.getRoot(tablePair.second);
+            log.info("table pair: {} {}", tablePair.first, tablePair.second);
+            log.info("outer inner: {} {}", outer, inner);
             if (outer.equals(inner)) {
                 List<List<Object>> nextResult = new ArrayList<>();
-                mergedMap.get(outer).getData().forEach(record -> {
+                for (List<Object> record : mergedMap.get(outer).getData()) {
                     boolean flag = true;
                     for (Pair<String, String> columnPair : constraints) {
                         String outerColumn = tablePair.first + '.' + columnPair.first;
@@ -1071,42 +1091,165 @@ public class DatabaseController {
                     }
                     if (flag)
                         nextResult.add(record);
-                });
+                }
                 mergedMap.replace(outer, new TableResult(mergedMap.get(outer).getHeaders(), nextResult));
             } else {
+                int outerSize = mergedMap.get(outer).getSize();
+                int innerSize = mergedMap.get(inner).getSize();
+                log.info("{} {}", inner, outer);
+                log.info("{} {}", outerSize, innerSize);
+                boolean flag1 = false;
                 List<String> nextHeader = new ArrayList<>();
                 List<List<Object>> nextData = new ArrayList<>();
-                nextHeader.addAll(mergedMap.get(outer).getHeaders());
-                nextHeader.addAll(mergedMap.get(inner).getHeaders());
-                mergedMap.get(outer).getData().forEach(outerRecord -> mergedMap.get(inner).getData().forEach(innerRecord -> {
-                    boolean flag = true;
-                    for (Pair<String, String> columnPair : constraints) {
-                        String outerColumn = tablePair.first + '.' + columnPair.first;
-                        String innerColumn = tablePair.second + '.' + columnPair.second;
-                        int outerId = mergedMap.get(outer).getHeaderIndex(outerColumn);
-                        int innerId = mergedMap.get(inner).getHeaderIndex(innerColumn);
-                        if (!outerRecord.get(outerId).equals(innerRecord.get(innerId))) {
-                            flag = false;
-                            break;
+                if(!marker.get(outer) && !marker.get(inner)) {
+//                    log.info("in double");
+                    if(innerSize < outerSize) {
+                        String tmp;
+                        tmp = outer;
+                        outer = inner;
+                        inner = tmp;
+                        flag1 = true;
+                    }
+                    InfoAndHandler innerPack = getTableInfo(inner);
+                    InfoAndHandler outerPack = getTableInfo(outer);
+                    for (Pair<String, String> constraintPair : constraints) {
+                        List<String> columnList = new ArrayList<>();
+                        if(flag1)
+                            columnList.add(constraintPair.first);
+                        else
+                            columnList.add(constraintPair.second);
+                        if(!innerPack.info.existsIndex(inner + "." + columnList)) {
+                            try {
+                                createIndex(inner + "." + columnList, inner, columnList);
+                            } catch (UnsupportedEncodingException e) {
+                                e.printStackTrace();
+                            }
                         }
                     }
-                    if (flag) {
-                        List<Object> concatRecord = new ArrayList<>();
-                        concatRecord.addAll(outerRecord);
-                        concatRecord.addAll(innerRecord);
-                        nextData.add(concatRecord);
+                    nextHeader.addAll(mergedMap.get(outer).getHeaders());
+                    nextHeader.addAll(mergedMap.get(inner).getHeaders());
+                    for (List<Object> outerRecord : mergedMap.get(outer).getData()) {
+                        List<WhereClause> whereClauses = new ArrayList<>();
+                        for (Pair<String, String> constraint : constraints) {
+                            String columnName = flag1 ? constraint.second : constraint.first;
+                            String targetName = flag1 ? constraint.first : constraint.second;
+//                            log.info("outer: {} inner: {}", outer, inner);
+//                            log.info("outerC: {} innerC: {}", columnName, targetName);
+//                            log.info("{}", mergedMap.get(outer).getHeaders());
+                            whereClauses.add(new ValueOperatorClause(inner, targetName, "=", outerRecord.get(mergedMap.get(outer).getHeaderIndex((flag1 ? tablePair.second : tablePair.first) + "." + columnName)) ));
+                        }
+                        try {
+                            RecordDataPack recordDataPack = searchIndices(inner, whereClauses);
+//                            log.info("{}", recordDataPack.data.size());
+                            for (List<Object> datum : recordDataPack.data) {
+                                List<Object> concatRecord = new ArrayList<>();
+                                concatRecord.addAll(outerRecord);
+                                concatRecord.addAll(datum);
+                                nextData.add(concatRecord);
+                            }
+                        } catch (UnsupportedEncodingException e) {
+                            e.printStackTrace();
+                        }
                     }
-                }));
+                } else if(!marker.get(outer) || !marker.get(inner)) {
+//                    log.info("in single");
+                    if(!marker.get(outer)) {
+                        String tmp;
+                        tmp = outer;
+                        outer = inner;
+                        inner = tmp;
+                        flag1 = true;
+                    }
+                    InfoAndHandler innerPack = getTableInfo(inner);
+                    InfoAndHandler outerPack = getTableInfo(outer);
+                    for (Pair<String, String> constraintPair : constraints) {
+                        List<String> columnList = new ArrayList<>();
+                        if(flag1)
+                            columnList.add(constraintPair.first);
+                        else
+                            columnList.add(constraintPair.second);
+                        if(!innerPack.info.existsIndex(inner + "." + columnList)) {
+                            try {
+                                createIndex(inner + "." + columnList, inner, columnList);
+                            } catch (UnsupportedEncodingException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+                    nextHeader.addAll(mergedMap.get(outer).getHeaders());
+                    nextHeader.addAll(mergedMap.get(inner).getHeaders());
+                    for (List<Object> outerRecord : mergedMap.get(outer).getData()) {
+                        List<WhereClause> whereClauses = new ArrayList<>();
+                        for (Pair<String, String> constraint : constraints) {
+                            String columnName = flag1 ? constraint.second : constraint.first;
+                            String targetName = flag1 ? constraint.first : constraint.second;
+//                            log.info("outer: {} inner: {}", outer, inner);
+//                            log.info("outerC: {} innerC: {}", columnName, targetName);
+//                            log.info("{}", mergedMap.get(outer).getHeaders());
+                            whereClauses.add(new ValueOperatorClause(inner, targetName, "=", outerRecord.get(mergedMap.get(outer).getHeaderIndex((flag1 ? tablePair.second : tablePair.first) + "." + columnName)) ));
+                        }
+                        try {
+                            RecordDataPack recordDataPack = searchIndices(inner, whereClauses);
+//                            log.info("{}", recordDataPack.data.size());
+                            for (List<Object> datum : recordDataPack.data) {
+                                List<Object> concatRecord = new ArrayList<>();
+                                concatRecord.addAll(outerRecord);
+                                concatRecord.addAll(datum);
+                                nextData.add(concatRecord);
+                            }
+                        } catch (UnsupportedEncodingException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                } else {
+                    nextHeader.addAll(mergedMap.get(outer).getHeaders());
+                    nextHeader.addAll(mergedMap.get(inner).getHeaders());
+                    for (List<Object> outerRecord : mergedMap.get(outer).getData()) {
+                        int cnt = 0;
+                        for (List<Object> innerRecord : mergedMap.get(inner).getData()) {
+                            boolean flag = true;
+                            for (Pair<String, String> columnPair : constraints) {
+                                String outerColumn = tablePair.first + '.' + columnPair.first;
+                                String innerColumn = tablePair.second + '.' + columnPair.second;
+                                int outerId = mergedMap.get(outer).getHeaderIndex(outerColumn);
+                                int innerId = mergedMap.get(inner).getHeaderIndex(innerColumn);
+                                if (!outerRecord.get(outerId).equals(innerRecord.get(innerId))) {
+                                    flag = false;
+                                    break;
+                                }
+                            }
+                            if (flag) {
+                                cnt ++;
+                                List<Object> concatRecord = new ArrayList<>();
+                                concatRecord.addAll(outerRecord);
+                                concatRecord.addAll(innerRecord);
+                                nextData.add(concatRecord);
+                            }
+                        }
+//                        log.info("{}", cnt);
+                    }
+                }
                 String newFather = unionFindSet.addEdge(outer, inner);
                 mergedMap.replace(newFather, new TableResult(nextHeader, nextData));
+                log.info("{}", mergedMap.get(newFather).getSize());
+                marker.replace(inner, true);
+                marker.replace(outer, true);
             }
+            log.info("edge: {} {}", tablePair.first, tablePair.second);
+            log.info("merge: {} {}", outer, inner);
+            mergedMap.forEach((s, result) -> {
+                log.info("s: {}, result header: {}", s, result.getHeaders());
+            });
+            log.info("");
         });
+
 
         //Step3: Join table without constraints
         List<TableResult> remainResult = new ArrayList<>();
         Set<String> mark = new HashSet<>();
         resultMap.keySet().forEach(key -> {
             String fkey = unionFindSet.getRoot(key);
+            log.info("fkey: {}", fkey);
             if (mark.contains(fkey))
                 return;
             mark.add(fkey);

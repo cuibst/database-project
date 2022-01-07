@@ -12,16 +12,15 @@ public class TableResult extends ResultItem {
     private final List<String> headers;
     private final Iterable<List<Object>> data;
     private final PrettyTable prettyTable;
+    private boolean init = false;
+    private int size = -1;
 
     public TableResult(List<String> header, Iterable<List<Object>> data) {
         prettyTable = new PrettyTable(header);
-        data.forEach(list -> {
-            List<String> strings = new ArrayList<>();
-            list.forEach(obj -> strings.add((obj == null) ? "NULL" : obj.toString()));
-            prettyTable.addRow(strings);
-        });
         this.headers = header;
         this.data = data;
+        if(data instanceof List)
+            size = ((List) data).size();
     }
 
     public Iterable<List<Object>> getData() {
@@ -36,8 +35,30 @@ public class TableResult extends ResultItem {
         return headers.indexOf(header);
     }
 
+    private void initTable() {
+        data.forEach(list -> {
+            List<String> strings = new ArrayList<>();
+            list.forEach(obj -> strings.add((obj == null) ? "NULL" : obj.toString()));
+            prettyTable.addRow(strings);
+        });
+    }
+
+    public int getSize() {
+        if(size != -1)
+            return size;
+        size = 0;
+        for (List<Object> datum : data) {
+            size++;
+        }
+        return size;
+    }
+
     @Override
     public String toString() {
+        if(!init) {
+            init = true;
+            initTable();
+        }
         return prettyTable.toString();
     }
 }

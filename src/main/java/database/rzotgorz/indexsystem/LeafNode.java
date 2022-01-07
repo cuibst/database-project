@@ -31,6 +31,7 @@ public class LeafNode extends TreeNode {
 
 
     public JSONObject split() {
+//        log.info("leaf split");
         int mid = (int) Math.floor((childKeys.size() + 1) / 2.0);
         ArrayList<IndexContent> newKeys = new ArrayList<>();
         newKeys.addAll(this.childKeys.subList(mid, childKeys.size()));
@@ -39,9 +40,11 @@ public class LeafNode extends TreeNode {
         JSONObject object = new JSONObject();
         object.put("newKeys", newKeys);
         object.put("newVal", newRids);
+        int totalSize=this.childRids.size();
         this.childRids = this.childRids.subList(0, mid);
         this.childKeys = this.childKeys.subList(0, mid);
         object.put("maxKey", newKeys.get(0));
+//        log.info("total size:{} , first size:{} , next size:{}",totalSize,this.childRids.size(),newKeys.size());
         return object;
     }
 
@@ -81,6 +84,7 @@ public class LeafNode extends TreeNode {
     }
 
     public List<RID> search(IndexContent key) {
+//        log.info(this.childKeys.toString());
         int low = lowerBound(key);
         int high = upperBound(key);
         if (low == -1)
@@ -139,6 +143,7 @@ public class LeafNode extends TreeNode {
             upper++;
         if (lower != 0)
             lower--;
+//        log.info(String.valueOf(this.childKeys.toString()));
         for (int i = lower; i < upper; i++) {
             if (left && right)
                 if (childKeys.get(i).compareTo(low) >= 0 && childKeys.get(i).compareTo(high) <= 0)

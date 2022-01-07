@@ -30,6 +30,7 @@ public class InterNode extends TreeNode {
     }
 
     public JSONObject split() {
+//        log.info("internode split");
         int mid = (int) Math.floor((childKeys.size() + 1) / 2.0);
         List<IndexContent> newKeys = new ArrayList<>();
         newKeys.addAll(this.childKeys.subList(mid, childKeys.size()));
@@ -65,7 +66,7 @@ public class InterNode extends TreeNode {
                 List<IndexContent> newKeys;
                 newKeys = (ArrayList<IndexContent>) object.get("newKeys");
                 IndexContent maxKey = (IndexContent) object.get("maxKey");
-                childKeys.add(index1, maxKey);
+                childKeys.add(index+1, maxKey);
                 int newPageId = indexHandler.createNewPage();
                 TreeNode node;
                 if (currentNode.nodeType == 0) {
@@ -79,7 +80,7 @@ public class InterNode extends TreeNode {
                     leafNode.setNextId(newPageId);
                     node = new LeafNode(newPageId, leafNode.parentId, leafNode.pageId, leafNode.getNextId(), newVal, newKeys, indexHandler, this.typeSize, this.indexType);
                 }
-                childNodes.add(index1, node);
+                childNodes.add(index+1, node);
             }
         }
     }
@@ -146,6 +147,7 @@ public class InterNode extends TreeNode {
 
     @Override
     public List<RID> search(IndexContent key) {
+//        log.info(this.childKeys.toString());
         int low = lowerBound(key);
         int high = upperBound(key);
         List<RID> list = new ArrayList<>();

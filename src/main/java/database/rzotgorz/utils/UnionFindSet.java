@@ -15,7 +15,11 @@ public class UnionFindSet<T extends Comparable<T>> {
     public T getRoot(T key) {
         if(!father.containsKey(key))
             throw new RuntimeException("Unknown key!");
-        return key.equals(father.get(key)) ? key : father.replace(key, getRoot(father.get(key)));
+        if(key.equals(father.get(key)))
+            return key;
+        T newkey = getRoot(father.get(key));
+        father.put(key, newkey);
+        return newkey;
     }
 
     public T addEdge(T u, T v) {

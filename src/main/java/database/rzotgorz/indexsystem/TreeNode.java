@@ -48,8 +48,12 @@ public class TreeNode {
             else
                 tail = mid;
         }
-        if (childKeys.get(head).compareTo(key) >= 0)
+        if (childKeys.get(head).compareTo(key) == 0)
             pos = head;
+        else if(childKeys.get(head).compareTo(key)>0)
+            pos = head-1;
+        if(pos < 0)
+            pos=0;
         return pos;
     }
 
