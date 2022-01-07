@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -18,10 +19,10 @@ import java.util.List;
 @Data
 @Slf4j
 public class Parser {
-    public static String parserDate(Long s) {
+    public static Date parserDate(Long s) {
         try {
             Date date = new Date(s);
-            return date.toString();
+            return date;
         } catch (Exception e) {
             throw new TypeException(String.format("cannot converter %s to Date type", s));
         }
@@ -96,7 +97,7 @@ public class Parser {
                     Long _value = Long.parseLong(value);
                     byte[] process = ByteLongConverter.long2Bytes(_value);
                     byte[] bytes = new byte[process.length + 1];
-                    bytes[0] = (byte) 0;
+                    bytes[0] = (byte) 1;
                     for (int i = 0; i < process.length; i++) {
                         bytes[i + 1] = process[i];
                     }
@@ -114,7 +115,6 @@ public class Parser {
         byte b = 0;
         Arrays.fill(data, b);
         int pos = 0;
-//        log.info("size:{} , valuesize:{}", typeList.size(), valueList.size());
         for (int item = 0; item < sizeList.size(); item++) {
             int length;
             byte[] bytes;
@@ -175,12 +175,13 @@ public class Parser {
                 }
                 return (data[0] == (byte) 0) ? null : (((Float) ByteFloatConverter.byte2float(process)));
             }
-            case "Date": {
+            case "DATE": {
                 byte[] process = new byte[8];
                 for (int i = 0; i < process.length; i++) {
                     process[i] = data[i + 1];
                 }
-                return (data[0] == (byte) 0) ? null : (((Long) ByteLongConverter.bytes2Long(process)));
+                SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+                return (data[0] == (byte) 0) ? null : formatter.format(((ByteLongConverter.bytes2Long(process))));
             }
             default: {
                 throw new RuntimeException(String.format("Invalid Type : %s", type));
@@ -195,7 +196,6 @@ public class Parser {
         List<Object> list = new ArrayList<>();
         for (int i = 0; i < sizeList.size(); i++) {
             byte[] process = new byte[sizeList.get(i)];
-//            log.info("size:{} content:{}", data.length, totalList);
             for (int j = 0; j < sizeList.get(i); j++) {
                 process[j] = data[pos + j];
             }

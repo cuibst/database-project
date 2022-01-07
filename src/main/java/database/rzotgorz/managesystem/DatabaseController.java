@@ -29,6 +29,8 @@ import java.io.FileNotFoundException;
 import java.io.UnsupportedEncodingException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.NotDirectoryException;
+import java.text.ParsePosition;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 @Slf4j
@@ -419,7 +421,7 @@ public class DatabaseController {
                                 throw new RuntimeException(String.format("Type %s expected but get %s instead.", type, value.getClass()));
                             break;
                         case "DATE":
-                            if (value.getClass() != Long.class)
+                            if (value.getClass() != String.class)
                                 throw new RuntimeException(String.format("Type %s expected but get %s instead.", type, value.getClass()));
                             break;
                         case "VARCHAR":
@@ -518,6 +520,35 @@ public class DatabaseController {
                             break;
                         case ">=":
                             interval.lower = Math.max((Float) interval.lower, value);
+                            break;
+                        default:
+                            return;
+                    }
+                    indexMap.put(columnName, interval);
+                } else if (pack.info.getColumns().get(columnName).getType().equals("DATE")) {
+                    if (interval == null)
+                        interval = new Interval(Long.MIN_VALUE, Long.MAX_VALUE);
+                    int value;
+                    if (((ValueOperatorClause) clause).getValue().getClass() == Integer.class)
+                        value = (Integer) ((ValueOperatorClause) clause).getValue();
+                    else
+                        value = ((Float) ((ValueOperatorClause) clause).getValue()).intValue();
+                    switch (operator) {
+                        case "=":
+                            interval.lower = Math.max((Long) interval.lower, value);
+                            interval.upper = Math.min((Long) interval.upper, value);
+                            break;
+                        case "<":
+                            interval.upper = Math.min((Long) interval.upper, value - 1);
+                            break;
+                        case ">":
+                            interval.lower = Math.max((Long) interval.lower, value + 1);
+                            break;
+                        case "<=":
+                            interval.upper = Math.min((Long) interval.upper, value);
+                            break;
+                        case ">=":
+                            interval.lower = Math.max((Long) interval.lower, value);
                             break;
                         default:
                             return;
@@ -712,7 +743,6 @@ public class DatabaseController {
                         if (originContent.compareTo(newContent) == 0)
                             continue;
                     }
-//                    InfoAndHandler targetPack = getTableInfo(foreignKey.targetTable);
                     if (tableInfo.getRootId(foreignKey.targetColumns) != null) {
                         int rootId = tableInfo.getRootId(foreignKey.targetColumns);
                         FileIndex index = indexManager.openedIndex(currentUsingDatabase, tableInfo.getName(), rootId, foreignKey.columns.toString());
@@ -753,7 +783,7 @@ public class DatabaseController {
         List<List<Object>> valuesList = new ArrayList<>();
         recordDataPack.data.forEach(objects -> {
             List<Object> result = new ArrayList<>();
-            objects.forEach(object -> result.add(object == null ? "NULL" : object));
+            objects.forEach(object -> result.add(objects == null ? "NULL" : object));
             valuesList.add(result);
         });
         return new TableResult(pack.info.getHeader(), valuesList);
@@ -769,6 +799,13 @@ public class DatabaseController {
             else
                 stringList.add(null);
         });
+        for (int i = 0; i < pack.info.getTypeList().size(); i++) {
+            if (pack.info.getTypeList().get(i).contains("DATE")) {
+                SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+                ParsePosition pos = new ParsePosition(0);
+                stringList.set(i, (stringList.get(i) == null) ? null : String.valueOf(formatter.parse(stringList.get(i), pos).getTime()));
+            }
+        }
         byte[] data = pack.info.buildRecord(stringList);
         FileHandler fileHandler = recordManager.openFile(getTablePath(tableName));
         Record rid = fileHandler.insertRecord(data);
@@ -804,7 +841,7 @@ public class DatabaseController {
             RecordDataPack dataPack = searchIndices(tableName, whereClauses);
             length = dataPack.records.size();
             FileHandler handler = this.recordManager.openFile(getTablePath(tableName));
-            boolean flag = false;
+            boolean flag;
             for (int i = 0; i < dataPack.records.size(); i++) {
                 List<Object> values = pack.info.loadRecord(dataPack.records.get(i));
                 setClauses.forEach(clause -> {
@@ -812,11 +849,16 @@ public class DatabaseController {
                     for (Map.Entry<String, ColumnInfo> entry : pack.info.getColumns().entrySet()) {
                         if (entry.getValue().getName().equals(clause.getColumnName())) {
                             switch (entry.getValue().getType()) {
+                                case "DATE":
+                                    SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+                                    ParsePosition pos = new ParsePosition(0);
+                                    values.set(cnt, String.valueOf(formatter.parse(clause.getValue().toString(), pos).getTime()));
+                                    break;
                                 case "INT":
-                                    values.set(cnt, Long.parseLong(clause.getValue()));
+                                    values.set(cnt, clause.getValue());
                                     break;
                                 case "FLOAT":
-                                    values.set(cnt, Float.parseFloat(clause.getValue()));
+                                    values.set(cnt, clause.getValue());
                                     break;
                                 case "VARCHAR":
                                     values.set(cnt, clause.getValue());
@@ -837,6 +879,7 @@ public class DatabaseController {
                     List<Object> values = pack.info.loadRecord(record);
                     List<Object> values1 = pack.info.loadRecord(dataPack.records.get(j));
                     List<String> headers = pack.info.getColumnName();
+                    log.info(values.toString());
                     setClauses.forEach(clause -> {
                         for (int i = 0; i < headers.size(); i++) {
                             String name = headers.get(i);
@@ -844,18 +887,30 @@ public class DatabaseController {
                                 values.set(i, clause.getValue());
                             }
                         }
+//                        for (int i = 0; i < pack.info.getTypeList().size(); i++) {
+//                            if (pack.info.getTypeList().get(i).contains("DATE")) {
+//                                SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+//                                ParsePosition pos = new ParsePosition(0);
+//                                values.set(i, String.valueOf(formatter.parse(values.get(i).toString(), pos).getTime()));
+//                            }
+//                        }
                         int cnt = 0;
                         for (Map.Entry<String, ColumnInfo> entry : pack.info.getColumns().entrySet()) {
                             if (entry.getValue().getName().equals(clause.getColumnName())) {
                                 switch (entry.getValue().getType()) {
                                     case "INT":
-                                        values1.set(cnt, Long.parseLong(clause.getValue()));
+                                        values1.set(cnt, clause.getValue());
                                         break;
                                     case "FLOAT":
-                                        values1.set(cnt, Float.parseFloat(clause.getValue()));
+                                        values1.set(cnt, clause.getValue());
                                         break;
                                     case "VARCHAR":
                                         values1.set(cnt, clause.getValue());
+                                        break;
+                                    case "DATE":
+                                        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+                                        ParsePosition pos = new ParsePosition(0);
+                                        values1.set(cnt, String.valueOf(formatter.parse(clause.getValue().toString(), pos).getTime()));
                                         break;
                                 }
                             }
@@ -863,13 +918,14 @@ public class DatabaseController {
                         }
                     });
                     List<String> stringList = new ArrayList<>();
-                    values.forEach(obj -> stringList.add(obj.toString()));
-                    byte[] data = pack.info.buildRecord(stringList);
-                    record.setData(data);
-                    handler.updateRecord(record);
+                    values.forEach(obj -> {
+                        if (obj != null)
+                            stringList.add(obj.toString());
+                        else
+                            stringList.add("null");
+                    });
                     deleteIndices(tableName, currentUsingDatabase, dataPack.data.get(j), record.getRid());
-                    insertIndices(tableName, currentUsingDatabase, values1, record.getRid());
-                    this.insertRecord(tableName, values1);
+                    this.insertRecord(tableName, values);
                 } catch (UnsupportedEncodingException e) {
                     e.printStackTrace();
                 }
@@ -887,9 +943,8 @@ public class DatabaseController {
         try {
             RecordDataPack data = searchIndices(tableName, whereClauses);
             length = data.records.size();
+            InfoAndHandler pack = getTableInfo(tableName);
             FileHandler handler = this.recordManager.openFile(getTablePath(tableName));
-//            log.info(String.valueOf(data.records.size()));
-//            data.data
             boolean flag = false;
             for (int i = 0; i < data.records.size(); i++) {
                 flag |= checkReverseForeignKeyConstraint(tableName, data.data.get(i), null);
@@ -1102,7 +1157,7 @@ public class DatabaseController {
         });
 
         if (group != null && group.tableName == null) {
-            if(columnToTable.get(group.columnName).size() != 1)
+            if (columnToTable.get(group.columnName).size() != 1)
                 throw new RuntimeException(String.format("Group by column %s is ambiguous.", group.columnName));
             group.tableName = columnToTable.get(group.columnName).get(0);
         }

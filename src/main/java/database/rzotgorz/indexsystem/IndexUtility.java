@@ -26,6 +26,8 @@ public class IndexUtility {
                 String str = list.get(i).replace(")", "");
                 String[] s = str.split("\\(");
                 size += Integer.parseInt(s[1]) + 1;
+            } else if (list.get(i).contains("DATE")) {
+                size += 9;
             }
         }
         return size;
@@ -71,6 +73,17 @@ public class IndexUtility {
                     System.arraycopy(res, 0, data, head, 4);
                 }
                 head += 4;
+            } else if (list.get(i).contains("DATE")) {
+                if (content.getIndexList().get(i) == null) {
+                    data[head] = 0;
+                    head++;
+                } else {
+                    data[head] = 1;
+                    head++;
+                    byte[] res = ByteLongConverter.long2Bytes((long) content.getIndexList().get(i));
+                    System.arraycopy(res, 0, data, head, 8);
+                }
+                head += 8;
             } else if (list.get(i).contains("VARCHAR")) {
                 int len = getStringSize(list.get(i));
                 if (content.getIndexList().get(i) == null) {

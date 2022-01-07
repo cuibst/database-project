@@ -151,16 +151,16 @@ public class TableInfo implements Serializable {
         return this.colIndex.get(name);
     }
 
-    public void checkValueMap(HashMap<String, String> map) {
-        for (Map.Entry<String, String> entry : map.entrySet()) {
-            ColumnInfo columnInfo = columns.get(entry.getKey());
-            if (columnInfo == null) {
-                throw new RuntimeException(String.format("column named :%s is unknown", entry.getKey()));
-            }
+//    public void checkValueMap(HashMap<String, String> map) {
+//        for (Map.Entry<String, String> entry : map.entrySet()) {
+//            ColumnInfo columnInfo = columns.get(entry.getKey());
+//            if (columnInfo == null) {
+//                throw new RuntimeException(String.format("column named :%s is unknown", entry.getKey()));
+//            }
 //            if (columnInfo.getType().equals("DATE"))
 //                map.put(entry.getKey(), Parser.parserDate(entry.getValue()).toString());
-        }
-    }
+//        }
+//    }
 
     public List<String> getHeader() {
         List<String> list = new ArrayList<>();

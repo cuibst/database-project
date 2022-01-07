@@ -17,7 +17,7 @@ public class TableResult extends ResultItem {
         prettyTable = new PrettyTable(header);
         data.forEach(list -> {
             List<String> strings = new ArrayList<>();
-            list.forEach(obj -> strings.add(obj.toString()));
+            list.forEach(obj -> strings.add((obj == null) ? "NULL" : obj.toString()));
             prettyTable.addRow(strings);
         });
         this.headers = header;

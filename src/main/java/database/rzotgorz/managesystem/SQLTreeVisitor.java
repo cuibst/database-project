@@ -13,7 +13,6 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 import java.io.FileNotFoundException;
 import java.io.Serializable;
 import java.nio.file.FileAlreadyExistsException;
-import java.sql.Date;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -335,8 +334,9 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
         else if (ctx.String() != null)
             return ctx.getText().substring(1, ctx.getText().length() - 1);
         else if (ctx.Date() != null) {
-            log.info(ctx.getText());
-            return Date.parse(ctx.getText());
+//            SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+//            ParsePosition pos = new ParsePosition(0);
+            return ctx.getText();
         } else
             return null;
     }
@@ -493,7 +493,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     public List<SetClause> visitSet_clause(SQLParser.Set_clauseContext ctx) {
         List<SetClause> result = new ArrayList<>();
         for (int i = 0; i < ctx.value().size(); i++) {
-            result.add(new SetClause(ctx.Identifier(i).toString(), ctx.value().get(i).getText()));
+            result.add(new SetClause(ctx.Identifier(i).toString(), ctx.value().get(i).accept(this)));
         }
         return result;
     }

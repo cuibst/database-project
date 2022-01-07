@@ -26,7 +26,7 @@ public class IndexContent implements Comparable {
                 return -1;
             if (list.get(i) == null)
                 return 1;
-            if(list.get(i).getClass() == Integer.class || list.get(i).getClass() == Long.class) {
+            if (list.get(i).getClass() == Integer.class || list.get(i).getClass() == Long.class) {
                 long val1;
                 try {
                     val1 = (Long) list.get(i);
@@ -39,10 +39,12 @@ public class IndexContent implements Comparable {
                 } catch (ClassCastException e) {
                     val2 = (Integer) indexList.get(i);
                 }
-                if(val1 != val2)
+                if (val1 != val2)
                     return val1 < val2 ? 1 : -1;
                 continue;
             }
+            log.info(list.toString());
+            log.info(indexList.toString());
             int ans = indexList.get(i).compareTo(list.get(i));
             if (ans != 0)
                 return ans;
