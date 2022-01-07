@@ -198,6 +198,6 @@ public class TableInfo implements Serializable {
     }
 
     public void removeIndex(List<String> columns) {
-        this.indicesMap.remove(name);
+        this.indicesMap.remove(name + "." + columns.toString());
     }
 }

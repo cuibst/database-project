@@ -68,7 +68,7 @@ public class IndexUtility {
                     data[head] = 1;
                     head++;
                     byte[] res = ByteFloatConverter.float2byte((float) content.getIndexList().get(i));
-                    System.arraycopy(res, 0, data, head, 8);
+                    System.arraycopy(res, 0, data, head, 4);
                 }
                 head += 4;
             } else if (list.get(i).contains("VARCHAR")) {

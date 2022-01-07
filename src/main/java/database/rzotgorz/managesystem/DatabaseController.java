@@ -362,8 +362,9 @@ public class DatabaseController {
             String type = tableInfo.getTypeList().get(index);
             if (clause instanceof OperatorClause) {
                 if (clause.getTargetColumn() != null) {
-                    if (!tableName.equals(clause.getTableName()))
+                    if (!tableName.equals(clause.getTargetTable()))
                         continue;
+                    log.info(tableInfo.getColIndex().toString());
                     int index2 = tableInfo.getIndex(clause.getTargetColumn());
                     functions.add(new AttributeCompare(index, index2, ((OperatorClause) clause).getOperator()));
                 } else {
@@ -398,10 +399,10 @@ public class DatabaseController {
     }
 
     public static class Interval {
-        public int lower;
-        public int upper;
+        public Object lower;
+        public Object upper;
 
-        public Interval(int lower, int upper) {
+        public Interval(Object lower, Object upper) {
             this.lower = lower;
             this.upper = upper;
         }
@@ -418,39 +419,75 @@ public class DatabaseController {
                 String operator = ((ValueOperatorClause) clause).getOperator();
                 String columnName = clause.getColumnName();
                 Interval interval = indexMap.get(columnName);
-                if (interval == null)
-                    interval = new Interval(Integer.MIN_VALUE, Integer.MAX_VALUE);
-                if (((ValueOperatorClause) clause).getValue().getClass() != Integer.class)
+
+                if (((ValueOperatorClause) clause).getValue().getClass() != Integer.class && ((ValueOperatorClause) clause).getValue().getClass() != Float.class)
                     return;
-                int value = (Integer) ((ValueOperatorClause) clause).getValue();
-                switch (operator) {
-                    case "=":
-                        interval.lower = Math.max(interval.lower, value);
-                        interval.upper = Math.min(interval.upper, value);
-                        break;
-                    case "<":
-                        interval.upper = Math.min(interval.upper, value - 1);
-                        break;
-                    case ">":
-                        interval.lower = Math.max(interval.lower, value + 1);
-                        break;
-                    case "<=":
-                        interval.upper = Math.min(interval.upper, value);
-                        break;
-                    case ">=":
-                        interval.lower = Math.max(interval.lower, value);
-                        break;
-                    default:
-                        return;
+                if(pack.info.getColumns().get(columnName).getType().equals("INT")) {
+                    if (interval == null)
+                        interval = new Interval(Integer.MIN_VALUE, Integer.MAX_VALUE);
+                    int value;
+                    if(((ValueOperatorClause) clause).getValue().getClass() == Integer.class)
+                        value = (Integer) ((ValueOperatorClause) clause).getValue();
+                    else
+                        value = ((Float) ((ValueOperatorClause) clause).getValue()).intValue();
+                    switch (operator) {
+                        case "=":
+                            interval.lower = Math.max((Integer)interval.lower, value);
+                            interval.upper = Math.min((Integer)interval.upper, value);
+                            break;
+                        case "<":
+                            interval.upper = Math.min((Integer)interval.upper, value - 1);
+                            break;
+                        case ">":
+                            interval.lower = Math.max((Integer)interval.lower, value + 1);
+                            break;
+                        case "<=":
+                            interval.upper = Math.min((Integer)interval.upper, value);
+                            break;
+                        case ">=":
+                            interval.lower = Math.max((Integer)interval.lower, value);
+                            break;
+                        default:
+                            return;
+                    }
+                    indexMap.put(columnName, interval);
+                } else if(pack.info.getColumns().get(columnName).getType().equals("FLOAT")) {
+                    if (interval == null)
+                        interval = new Interval(Float.MIN_VALUE, Float.MAX_VALUE);
+                    float value;
+                    if(((ValueOperatorClause) clause).getValue().getClass() == Integer.class)
+                        value = (Integer) ((ValueOperatorClause) clause).getValue();
+                    else
+                        value = ((Float) ((ValueOperatorClause) clause).getValue()).intValue();
+                    switch (operator) {
+                        case "=":
+                            interval.lower = Math.max((Float) interval.lower, value);
+                            interval.upper = Math.min((Float)interval.upper, value);
+                            break;
+                        case "<":
+                            interval.upper = Math.min((Float)interval.upper, value - 1);
+                            break;
+                        case ">":
+                            interval.lower = Math.max((Float)interval.lower, value + 1);
+                            break;
+                        case "<=":
+                            interval.upper = Math.min((Float)interval.upper, value);
+                            break;
+                        case ">=":
+                            interval.lower = Math.max((Float)interval.lower, value);
+                            break;
+                        default:
+                            return;
+                    }
+                    indexMap.put(columnName, interval);
                 }
-                indexMap.put(columnName, interval);
             }
         });
         Set<RID> result = null;
         for (Map.Entry<String, Interval> entry : indexMap.entrySet()) {
             FileIndex index = indexManager.openedIndex(currentUsingDatabase, tableName, pack.info.getRootId(new ArrayList<>(List.of(entry.getKey()))), new ArrayList<>(List.of(entry.getKey())).toString());
-            IndexContent lower = new IndexContent(new ArrayList<>(List.of(entry.getValue().lower)));
-            IndexContent upper = new IndexContent(new ArrayList<>(List.of(entry.getValue().upper)));
+            IndexContent lower = new IndexContent(new ArrayList<>(List.of((Comparable) entry.getValue().lower)));
+            IndexContent upper = new IndexContent(new ArrayList<>(List.of((Comparable) entry.getValue().upper)));
             if (result == null) {
                 ArrayList<RID> res = index.range(lower, upper);
                 if (res == null)

@@ -344,7 +344,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
         try {
             controller.createIndex(tableName + "." + columns, tableName, columns);
         } catch (Exception e) {
-            return new MessageResult(e.getMessage(), true);
+            throw new RuntimeException(e.getMessage());
         }
         return new OperationResult("added", columns.size());
     }
@@ -353,13 +353,7 @@ public class SQLTreeVisitor extends SQLBaseVisitor<Object> {
     public Object visitAlter_drop_index(SQLParser.Alter_drop_indexContext ctx) {
         String tableName = ctx.Identifier().getText();
         List<String> columns = ((PrimaryKey) ctx.identifiers().accept(this)).fields;
-        for (String column : columns) {
-            try {
-                controller.removeIndex(column);
-            } catch (Exception e) {
-                return new MessageResult(e.getMessage(), true);
-            }
-        }
+        controller.removeIndex(tableName + "." + columns.toString());
         return new OperationResult("dropped", columns.size());
     }
 
