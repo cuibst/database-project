@@ -846,6 +846,9 @@ public class DatabaseController {
             else
                 stringList.add(null);
         });
+        if (pack.info.getColumns().size() != valueList.size()) {
+            throw new RuntimeException("Value list length mismatch");
+        }
         byte[] data = pack.info.buildRecord(stringList);
         FileHandler fileHandler = recordManager.openFile(getTablePath(tableName));
         Record rid = fileHandler.insertRecord(data);
