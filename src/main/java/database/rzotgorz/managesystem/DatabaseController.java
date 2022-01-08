@@ -345,6 +345,7 @@ public class DatabaseController {
         MetaHandler metaHandler = metaManager.openMeta(currentUsingDatabase);
         List<String> key = metaHandler.getTable(tableName).getPrimary();
         removeIndex(tableName + "." + key);
+        metaHandler.getTable(tableName).setPrimary(new ArrayList<>());
     }
 
     public void removeForeignKeyConstraint(String tableName, String targetTableName, List<String> columns) {
@@ -761,18 +762,18 @@ public class DatabaseController {
      * @throws UnsupportedEncodingException ???
      */
     public boolean checkReverseForeignKeyConstraint(String tableName, List<Object> values, List<Object> newValues) throws UnsupportedEncodingException {
-        InfoAndHandler pack = getTableInfo(tableName);
-        for (TableInfo tableInfo : pack.handler.getDbInfo().getTbMap().values()) {
+        InfoAndHandler pack = getTableInfo(tableName); //target
+        for (TableInfo tableInfo : pack.handler.getDbInfo().getTbMap().values()) { //source
             if (tableInfo.getName().equals(tableName))
                 continue;
             for (SQLTreeVisitor.ForeignKey foreignKey : tableInfo.getForeign().values()) {
-                if (foreignKey.targetTable.equals(tableName)) {
+                if (foreignKey.targetTable.equals(tableName)) { //target
                     List<Comparable> originalValue = new ArrayList<>();
                     List<Comparable> newValue = new ArrayList<>();
                     foreignKey.targetColumns.forEach(column -> {
-                        originalValue.add((Comparable) values.get(tableInfo.getIndex(column)));
+                        originalValue.add((Comparable) values.get(pack.info.getIndex(column)));
                         if (newValues != null)
-                            newValue.add((Comparable) newValues.get(tableInfo.getIndex(column)));
+                            newValue.add((Comparable) newValues.get(pack.info.getIndex(column)));
                     });
                     IndexContent originContent = new IndexContent(originalValue);
                     if (newValues != null) {
@@ -780,8 +781,8 @@ public class DatabaseController {
                         if (originContent.compareTo(newContent) == 0)
                             continue;
                     }
-                    if (tableInfo.getRootId(foreignKey.targetColumns) != null) {
-                        int rootId = tableInfo.getRootId(foreignKey.targetColumns);
+                    if (tableInfo.getRootId(foreignKey.columns) != null) {
+                        int rootId = tableInfo.getRootId(foreignKey.columns);
                         FileIndex index = indexManager.openedIndex(currentUsingDatabase, tableInfo.getName(), rootId, foreignKey.columns.toString());
                         List<RID> rids = index.search(originContent);
                         if (rids != null && !rids.isEmpty())
@@ -789,11 +790,12 @@ public class DatabaseController {
                     } else {
                         List<WhereClause> clauses = new ArrayList<>();
                         for (int i = 0; i < foreignKey.columns.size(); i++) {
-                            String column = foreignKey.columns.get(i);
-                            Object value = values.get(pack.info.getIndex(column));
-                            clauses.add(new ValueOperatorClause(tableInfo.getName(), column, "=", value));
+                            String sourceColumn = foreignKey.columns.get(i);
+                            String targetColumn = foreignKey.targetColumns.get(i);
+                            Object value = values.get(pack.info.getIndex(targetColumn));
+                            clauses.add(new ValueOperatorClause(tableInfo.getName(), sourceColumn, "=", value));
                         }
-                        RecordDataPack recordDataPack = searchIndices(foreignKey.targetTable, clauses);
+                        RecordDataPack recordDataPack = searchIndices(tableInfo.getName(), clauses);
                         if (recordDataPack.records != null && recordDataPack.records.size() != 0)
                             return true;
                     }
@@ -1080,8 +1082,8 @@ public class DatabaseController {
             List<Pair<String, String>> constraints = edgeMap.get(tablePair);
             String outer = unionFindSet.getRoot(tablePair.first);
             String inner = unionFindSet.getRoot(tablePair.second);
-            log.info("table pair: {} {}", tablePair.first, tablePair.second);
-            log.info("outer inner: {} {}", outer, inner);
+//            log.info("table pair: {} {}", tablePair.first, tablePair.second);
+//            log.info("outer inner: {} {}", outer, inner);
             if (outer.equals(inner)) {
                 List<List<Object>> nextResult = new ArrayList<>();
                 for (List<Object> record : mergedMap.get(outer).getData()) {
@@ -1103,8 +1105,8 @@ public class DatabaseController {
             } else {
                 int outerSize = mergedMap.get(outer).getSize();
                 int innerSize = mergedMap.get(inner).getSize();
-                log.info("{} {}", inner, outer);
-                log.info("{} {}", outerSize, innerSize);
+//                log.info("{} {}", inner, outer);
+//                log.info("{} {}", outerSize, innerSize);
                 boolean flag1 = false;
                 List<String> nextHeader = new ArrayList<>();
                 List<List<Object>> nextData = new ArrayList<>();
@@ -1238,16 +1240,16 @@ public class DatabaseController {
                 }
                 String newFather = unionFindSet.addEdge(outer, inner);
                 mergedMap.replace(newFather, new TableResult(nextHeader, nextData));
-                log.info("{}", mergedMap.get(newFather).getSize());
+//                log.info("{}", mergedMap.get(newFather).getSize());
                 marker.replace(inner, true);
                 marker.replace(outer, true);
             }
-            log.info("edge: {} {}", tablePair.first, tablePair.second);
-            log.info("merge: {} {}", outer, inner);
-            mergedMap.forEach((s, result) -> {
-                log.info("s: {}, result header: {}", s, result.getHeaders());
-            });
-            log.info("");
+//            log.info("edge: {} {}", tablePair.first, tablePair.second);
+//            log.info("merge: {} {}", outer, inner);
+//            mergedMap.forEach((s, result) -> {
+//                log.info("s: {}, result header: {}", s, result.getHeaders());
+//            });
+//            log.info("");
         });
 
 
@@ -1256,7 +1258,7 @@ public class DatabaseController {
         Set<String> mark = new HashSet<>();
         resultMap.keySet().forEach(key -> {
             String fkey = unionFindSet.getRoot(key);
-            log.info("fkey: {}", fkey);
+//            log.info("fkey: {}", fkey);
             if (mark.contains(fkey))
                 return;
             mark.add(fkey);
