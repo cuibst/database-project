@@ -25,7 +25,7 @@ public class ColumnInfo implements Serializable {
         } else if (this.type.equals("FLOAT")) {
             this.size = 5;
         } else if (this.type.equals("VARCHAR")) {
-            this.size = size + 1;
+            this.size = size;
         }
         notNull = false;
     }
