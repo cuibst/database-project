@@ -3,6 +3,7 @@ package database.rzotgorz.metaSystem;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.File;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -50,10 +51,23 @@ public class DbInfo implements Serializable {
     }
 
 
-    public void removeTable(String name) {
-        if (!this.tbMap.containsKey(name))
+    public void removeTable(String tableName) {
+        if (!this.tbMap.containsKey(tableName))
             throw new RuntimeException(String.format("Can not find table named :%s", name));
-        this.tbMap.remove(name);
+        this.tbMap.remove(tableName);
+        List<String> names = new ArrayList<>();
+        for (Map.Entry<String, IndexInfo> entry : index.entrySet()) {
+            IndexInfo info = entry.getValue();
+            if (info.tableName.equals(tableName)) {
+                names.add(entry.getKey());
+                String s = "data" + File.separator + this.name + File.separator + tableName + info.columnName.toString() + ".type";
+                File file = new File(s);
+                if (file.exists()) {
+                    file.delete();
+                }
+            }
+        }
+        names.forEach(name1 -> index.remove(name1));
     }
 
     public void removeColumn(String tbName, String colName) {

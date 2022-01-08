@@ -101,7 +101,7 @@ public class RecordManager {
 
     public void deleteFile(String filename) {
         closeFile(filename);
-        File file = new File(filename);
+        File file = new File("data" + File.separator + filename);
         try {
             file.delete();
         } catch (Exception e) {

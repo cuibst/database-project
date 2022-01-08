@@ -163,7 +163,11 @@ public class DatabaseController {
     public ResultItem dropTable(String tableName) {
         if (currentUsingDatabase == null)
             return new MessageResult("No database is being used!", true);
+        InfoAndHandler pack = getTableInfo(tableName);
         MetaHandler handler = metaManager.openMeta(currentUsingDatabase);
+        pack.info.getIndicesMap().values().forEach(rootId -> {
+            indexManager.closeIndex(tableName, rootId);
+        });
         handler.removeTable(tableName);
         recordManager.deleteFile(getTablePath(tableName));
         return new MessageResult("ok");
@@ -386,7 +390,7 @@ public class DatabaseController {
             List<Comparable> content = new ArrayList<>();
             columnId.forEach(id -> content.add((Comparable) data.get(id)));
 //            log.info("insert {}", content.get(0));
-            if(content.get(0).equals(3))
+            if (content.get(0).equals(3))
                 cnt++;
             index.insert(new IndexContent(content), record.getRid());
             int res = index.search(new IndexContent(new ArrayList<>(List.of(3)))).size();
@@ -818,12 +822,12 @@ public class DatabaseController {
             List<Object> result = new ArrayList<>();
             for (int i = 0; i < objects.size(); i++) {
                 Object object = objects.get(i);
-                if(object == null)
+                if (object == null)
                     object = "NULL";
-                else if(pack.info.getTypeList().get(i).equals("DATE")) {
+                else if (pack.info.getTypeList().get(i).equals("DATE")) {
                     SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
                     ParsePosition pos = new ParsePosition(0);
-                    object = formatter.format(new Date((Long)object));
+                    object = formatter.format(new Date((Long) object));
                 }
                 result.add(object);
             }
@@ -1064,7 +1068,7 @@ public class DatabaseController {
         tablePairs.sort((o1, o2) -> {
             int size1 = Math.max(resultMap.get(o1.first).getSize(), resultMap.get(o1.second).getSize());
             int size2 = Math.max(resultMap.get(o2.first).getSize(), resultMap.get(o2.second).getSize());
-            if(size1 != size2)
+            if (size1 != size2)
                 return size1 < size2 ? -1 : 1;
             return 0;
         });
@@ -1101,9 +1105,9 @@ public class DatabaseController {
                 boolean flag1 = false;
                 List<String> nextHeader = new ArrayList<>();
                 List<List<Object>> nextData = new ArrayList<>();
-                if(!marker.get(outer) && !marker.get(inner)) {
+                if (!marker.get(outer) && !marker.get(inner)) {
 //                    log.info("in double");
-                    if(innerSize < outerSize) {
+                    if (innerSize < outerSize) {
                         String tmp;
                         tmp = outer;
                         outer = inner;
@@ -1114,11 +1118,11 @@ public class DatabaseController {
                     InfoAndHandler outerPack = getTableInfo(outer);
                     for (Pair<String, String> constraintPair : constraints) {
                         List<String> columnList = new ArrayList<>();
-                        if(flag1)
+                        if (flag1)
                             columnList.add(constraintPair.first);
                         else
                             columnList.add(constraintPair.second);
-                        if(!innerPack.info.existsIndex(inner + "." + columnList)) {
+                        if (!innerPack.info.existsIndex(inner + "." + columnList)) {
                             try {
                                 createIndex(inner + "." + columnList, inner, columnList);
                             } catch (UnsupportedEncodingException e) {
@@ -1136,7 +1140,7 @@ public class DatabaseController {
 //                            log.info("outer: {} inner: {}", outer, inner);
 //                            log.info("outerC: {} innerC: {}", columnName, targetName);
 //                            log.info("{}", mergedMap.get(outer).getHeaders());
-                            whereClauses.add(new ValueOperatorClause(inner, targetName, "=", outerRecord.get(mergedMap.get(outer).getHeaderIndex((flag1 ? tablePair.second : tablePair.first) + "." + columnName)) ));
+                            whereClauses.add(new ValueOperatorClause(inner, targetName, "=", outerRecord.get(mergedMap.get(outer).getHeaderIndex((flag1 ? tablePair.second : tablePair.first) + "." + columnName))));
                         }
                         try {
                             RecordDataPack recordDataPack = searchIndices(inner, whereClauses);
@@ -1151,9 +1155,9 @@ public class DatabaseController {
                             e.printStackTrace();
                         }
                     }
-                } else if(!marker.get(outer) || !marker.get(inner)) {
+                } else if (!marker.get(outer) || !marker.get(inner)) {
 //                    log.info("in single");
-                    if(!marker.get(outer)) {
+                    if (!marker.get(outer)) {
                         String tmp;
                         tmp = outer;
                         outer = inner;
@@ -1164,11 +1168,11 @@ public class DatabaseController {
                     InfoAndHandler outerPack = getTableInfo(outer);
                     for (Pair<String, String> constraintPair : constraints) {
                         List<String> columnList = new ArrayList<>();
-                        if(flag1)
+                        if (flag1)
                             columnList.add(constraintPair.first);
                         else
                             columnList.add(constraintPair.second);
-                        if(!innerPack.info.existsIndex(inner + "." + columnList)) {
+                        if (!innerPack.info.existsIndex(inner + "." + columnList)) {
                             try {
                                 createIndex(inner + "." + columnList, inner, columnList);
                             } catch (UnsupportedEncodingException e) {
@@ -1186,7 +1190,7 @@ public class DatabaseController {
 //                            log.info("outer: {} inner: {}", outer, inner);
 //                            log.info("outerC: {} innerC: {}", columnName, targetName);
 //                            log.info("{}", mergedMap.get(outer).getHeaders());
-                            whereClauses.add(new ValueOperatorClause(inner, targetName, "=", outerRecord.get(mergedMap.get(outer).getHeaderIndex((flag1 ? tablePair.second : tablePair.first) + "." + columnName)) ));
+                            whereClauses.add(new ValueOperatorClause(inner, targetName, "=", outerRecord.get(mergedMap.get(outer).getHeaderIndex((flag1 ? tablePair.second : tablePair.first) + "." + columnName))));
                         }
                         try {
                             RecordDataPack recordDataPack = searchIndices(inner, whereClauses);
@@ -1219,7 +1223,7 @@ public class DatabaseController {
                                 }
                             }
                             if (flag) {
-                                cnt ++;
+                                cnt++;
                                 List<Object> concatRecord = new ArrayList<>();
                                 concatRecord.addAll(outerRecord);
                                 concatRecord.addAll(innerRecord);
