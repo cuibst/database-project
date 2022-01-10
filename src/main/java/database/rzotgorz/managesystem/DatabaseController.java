@@ -719,6 +719,7 @@ public class DatabaseController {
         InfoAndHandler pack = getTableInfo(tableName);
         if (pack.info.getForeign().size() == 0)
             return false;
+        outer:
         for (Map.Entry<String, SQLTreeVisitor.ForeignKey> entry : pack.info.getForeign().entrySet()) {
             List<String> columns = entry.getValue().columns;
             SQLTreeVisitor.ForeignKey foreignKey = entry.getValue();
@@ -732,7 +733,7 @@ public class DatabaseController {
 //                log.info("targetColumn:{}", targetColumn);
                 indexValue.add((Comparable) value);
                 if (value == null)
-                    throw new RuntimeException("Foreign key can't have null value.");
+                    continue outer;
                 clauses.add(new ValueOperatorClause(foreignKey.targetTable, targetColumn, "=", value));
             }
             InfoAndHandler targetPack = getTableInfo(foreignKey.targetTable);

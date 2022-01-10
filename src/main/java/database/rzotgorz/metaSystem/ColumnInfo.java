@@ -25,7 +25,7 @@ public class ColumnInfo implements Serializable {
         } else if (this.type.equals("FLOAT")) {
             this.size = 5;
         } else if (this.type.equals("VARCHAR")) {
-            this.size = size;
+            this.size = size+1;
         }
         notNull = false;
     }
@@ -44,7 +44,7 @@ public class ColumnInfo implements Serializable {
         if (!this.type.equals("VARCHAR"))
             object[1] = this.type;
         else
-            object[1] = String.format("%s(%d)", this.type, this.size);
+            object[1] = String.format("%s(%d)", this.type, this.size-1);
         object[2] = notNull ? "REFUSE" : "ALLOW";
         object[3] = this.defaultValue == null ? "NULL" : this.defaultValue.toString();
         return object;
